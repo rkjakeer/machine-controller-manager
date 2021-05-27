@@ -124,9 +124,7 @@ func (c *IntegrationTestFramework) cloneMcmRepo() error {
 		return nil
 	}
 	src := "https://github.com/gardener/machine-controller-manager.git"
-	helpers.CheckDst(c.mcmRepoPath)
-	err := helpers.CloningRepo(c.mcmRepoPath, src)
-	if err != nil {
+	if err := helpers.CloningRepo(c.mcmRepoPath, src); err != nil {
 		return err
 	}
 	return nil

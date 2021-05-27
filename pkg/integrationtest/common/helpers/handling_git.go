@@ -2,30 +2,9 @@ package helpers
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/go-git/go-git/v5"
 )
-
-// CheckDst checks if specified destination folder exists
-func CheckDst(dst string) error {
-	/* TO-DO: This function verifies if the directory exists and
-	if it already exists, then it deletes the folder and its contents
-	*/
-	_, err := os.Stat(dst)
-	if err == nil {
-		fmt.Println("Folder and contents do exist, therefore deleting the folder and its contents ...")
-		// delete folder and contents
-		err := os.RemoveAll(dst)
-		if err != nil {
-			return err
-		}
-	} else {
-		fmt.Println("Folder and contents do not exist")
-	}
-
-	return nil
-}
 
 // CloningRepo pulls down the specified git repo to the destination folder
 func CloningRepo(dst string, src string) error {
