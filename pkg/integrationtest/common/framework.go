@@ -118,12 +118,17 @@ func (c *IntegrationTestFramework) cloneMcmRepo() error {
 	This is required if there is no mcm container image tag supplied or
 	the clusters are not seed (control) and shoot (target) clusters
 	*/
-	// src := "https://github.com/gardener/machine-controller-manager.git"
-	// helpers.CheckDst(c.mcmRepoPath)
-	// err := helpers.CloningRepo(c.mcmRepoPath, src)
-	// if err != nil {
-	// 	return err
-	// }
+	fi, _ := os.Stat(c.mcmRepoPath)
+	if fi.IsDir() {
+		log.Println("skipping cloning as mcmRepoPath directory already exists. If cloning is necessary, delete mcm directlry and rerun test")
+		return nil
+	}
+	src := "https://github.com/gardener/machine-controller-manager.git"
+	helpers.CheckDst(c.mcmRepoPath)
+	err := helpers.CloningRepo(c.mcmRepoPath, src)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
