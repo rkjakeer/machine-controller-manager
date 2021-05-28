@@ -120,7 +120,7 @@ func (c *IntegrationTestFramework) cloneMcmRepo() error {
 	*/
 	fi, _ := os.Stat(c.mcmRepoPath)
 	if fi.IsDir() {
-		log.Println("skipping cloning as mcmRepoPath directory already exists. If cloning is necessary, delete mcm directlry and rerun test")
+		log.Printf("skipping as %s directory already exists. If cloning is necessary, delete directory and rerun test", c.mcmRepoPath)
 		return nil
 	}
 	src := "https://github.com/gardener/machine-controller-manager.git"
@@ -472,7 +472,6 @@ func (c *IntegrationTestFramework) SetupBeforeSuite() {
 		secret, err := c.ControlKubeCluster.Clientset.CoreV1().Secrets(machineClass.SecretRef.Namespace).Get(machineClass.SecretRef.Name, metav1.GetOptions{})
 		if err == nil {
 			clusterName, err := c.ControlKubeCluster.ClusterName()
-			log.Println("using control cluster \"", clusterName, "\"")
 			Expect(err).NotTo(HaveOccurred())
 			err = c.resourcesTracker.InitializeResourcesTracker(machineClass, secret, clusterName)
 			//Check there is no error occured
@@ -499,52 +498,38 @@ func (c *IntegrationTestFramework) BeforeEachCheck() {
 func (c *IntegrationTestFramework) ControllerTests() {
 	// Testcase #01 | Machine
 	Describe("Machine Resource", func() {
+		var initialNodes int16
 		Context("Creation", func() {
 			// Probe nodes currently available in target cluster
-			var initialNodes int16
-
 			It("should not lead to any errors", func() {
 				// apply machine resource yaml file
 				initialNodes = c.TargetKubeCluster.NumberOfNodes()
+				By("checking for no errors while creation")
 				Expect(c.ControlKubeCluster.ApplyYamlFile("../../../kubernetes/machine.yaml", c.controlClusterNamespace)).To(BeNil())
 				//fmt.Println("wait for 30 sec before probing for nodes")
 			})
 			It("should add 1 more node in target cluster", func() {
 				// check whether there is one node more
+				By("Waiting until number of ready nodes is 1 more than initial nodes")
 				Eventually(c.TargetKubeCluster.NumberOfReadyNodes, 600, 5).Should(BeNumerically("==", initialNodes+1))
 			})
 		})
 
 		Context("Deletion", func() {
-			// BeforeEach(func() {
-			// 	// Check there are no machine deployment and machinesets resources existing
-			// 	deploymentList, err := ControlKubeCluster.McmClient.MachineV1alpha1().MachineDeployments(controlClusterNamespace).List(metav1.ListOptions{})
-			// 	Expect(len(deploymentList.Items)).Should(BeZero(), "Zero MachineDeployments should exist")
-			// 	Expect(err).Should(BeNil())
-			// 	machineSetsList, err := ControlKubeCluster.McmClient.MachineV1alpha1().MachineSets(controlClusterNamespace).List(metav1.ListOptions{})
-			// 	Expect(len(machineSetsList.Items)).Should(BeZero(), "Zero Machinesets should exist")
-			// 	Expect(err).Should(BeNil())
-
-			// })
 			Context("When machines available", func() {
-				var initialNodes int16
-				It("should not lead to errors", func() {
+				It("should not lead to errorsand", func() {
 					machinesList, _ := c.ControlKubeCluster.McmClient.MachineV1alpha1().Machines(c.controlClusterNamespace).List(metav1.ListOptions{})
 					if len(machinesList.Items) != 0 {
-						// Keep count of nodes available
-						initialNodes = c.TargetKubeCluster.NumberOfNodes()
+						By("checking for no errors while deletion")
 						Expect(c.ControlKubeCluster.McmClient.MachineV1alpha1().Machines(c.controlClusterNamespace).Delete("test-machine", &metav1.DeleteOptions{})).Should(BeNil(), "No Errors while deleting machine")
 					}
 				})
 				It("should remove 1 node in target cluster", func() {
-					// check there are n-1 nodes
-					if initialNodes != 0 {
-						Eventually(c.TargetKubeCluster.NumberOfNodes, 180, 5).Should(BeNumerically("==", initialNodes-1))
-					}
+					By("Waiting until number of ready nodes is eual to number of initial  nodes")
+					Eventually(c.TargetKubeCluster.NumberOfNodes, 180, 5).Should(BeNumerically("==", initialNodes))
 				})
 			})
 			Context("when machines are not available", func() {
-				var initialNodes int16
 				// delete one machine (non-existent) by random text as name of resource
 				// check there are no changes to nodes
 
@@ -553,18 +538,20 @@ func (c *IntegrationTestFramework) ControllerTests() {
 					// delete machine resource
 					machinesList, _ := c.ControlKubeCluster.McmClient.MachineV1alpha1().Machines(c.controlClusterNamespace).List(metav1.ListOptions{})
 					if len(machinesList.Items) == 0 {
-						initialNodes = c.TargetKubeCluster.NumberOfNodes()
 						err := c.ControlKubeCluster.McmClient.MachineV1alpha1().Machines(c.controlClusterNamespace).Delete("test-machine-dummy", &metav1.DeleteOptions{})
+						By("checking for errors while deletion")
 						Expect(err).To(HaveOccurred())
 						time.Sleep(30 * time.Second)
+						By("Checking number of ready nodes is eual to number of initial nodes")
 						Expect(c.TargetKubeCluster.NumberOfNodes()).To(BeEquivalentTo(initialNodes))
 					} else {
-						log.Println("Skip testcase as there are machines available.")
+						By("Skipping as there are machines available and this check can't be performed")
 					}
 				})
 			})
 		})
 	})
+
 	// Testcase #02 | Machine Deployment
 	Describe("Machine Deployment resource", func() {
 		var initialNodes int16
@@ -573,13 +560,13 @@ func (c *IntegrationTestFramework) ControllerTests() {
 				//probe initialnodes before continuing
 				initialNodes = c.TargetKubeCluster.NumberOfNodes()
 
-				// apply machine resource yaml file
+				// apply machinedeployment resource yaml file
+				By("checking for no errors while creation")
 				Expect(c.ControlKubeCluster.ApplyYamlFile("../../../kubernetes/machine-deployment.yaml", c.controlClusterNamespace)).To(BeNil())
 			})
 			It("should add 3 more nodes to target cluster", func() {
-				log.Println("Wait until new nodes are added. Number of nodes should be ", initialNodes+3)
-
 				// check whether all the expected nodes are ready
+				By("Waiting until number of ready nodes are 3 more than initial")
 				Eventually(c.TargetKubeCluster.NumberOfReadyNodes, 180, 5).Should(BeNumerically("==", initialNodes+3))
 			})
 		})
@@ -592,13 +579,12 @@ func (c *IntegrationTestFramework) ControllerTests() {
 					_, updateErr := c.ControlKubeCluster.McmClient.MachineV1alpha1().MachineDeployments(c.controlClusterNamespace).Update(machineDployment)
 					return updateErr
 				})
-
+				By("checking for no update errors")
 				Expect(retryErr).NotTo(HaveOccurred())
 			})
 			It("should add futher 3 nodes to target cluster", func() {
-				log.Println("Wait until new nodes are added. Number of nodes should be ", initialNodes+6)
-
 				// check whether all the expected nodes are ready
+				By("checking number of ready nodes are 6 more than initial")
 				Eventually(c.TargetKubeCluster.NumberOfReadyNodes, 180, 5).Should(BeNumerically("==", initialNodes+6))
 			})
 
@@ -606,48 +592,42 @@ func (c *IntegrationTestFramework) ControllerTests() {
 		Context("scale-down with replicas=2", func() {
 			// rapidly scaling back to 2 leading to a freezing and unfreezing
 			// check for freezing and unfreezing of machine due to rapid scale up and scale down in the logs of mcm
-			/* freeze_count=$(cat logs/${provider}-mcm.out | grep ' Froze MachineSet' | wc -l)
-			 if [[ freeze_count -eq 0 ]]; then
-				 printf "\tFailed: Freezing of machineSet failed. Exiting Test to avoid further conflicts.\n"
-				 terminate_script
-			 fi
 
-			 unfreeze_count=$(cat logs/${provider}-mcm.out | grep ' Unfroze MachineSet' | wc -l)
-			 if [[ unfreeze_count -eq 0 ]]; then
-				 printf "\tFailed: Unfreezing of machineSet failed. Exiting Test to avoid further conflicts.\n"
-				 terminate_script
-			 fi */
 			It("Should not lead to errors", func() {
-
-				//Fetch machine deployment
-				machineDeployment, _ := c.ControlKubeCluster.McmClient.MachineV1alpha1().MachineDeployments(c.controlClusterNamespace).Get("test-machine-deployment", metav1.GetOptions{})
-
-				//revert replica count to 3
-				machineDeployment.Spec.Replicas = 2
-
-				//update machine deployment
-				_, err := c.ControlKubeCluster.McmClient.MachineV1alpha1().MachineDeployments(c.controlClusterNamespace).Update(machineDeployment)
-
-				//Check there is no error occured
-				Expect(err).NotTo(HaveOccurred())
+				retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+					machineDployment, _ := c.ControlKubeCluster.McmClient.MachineV1alpha1().MachineDeployments(c.controlClusterNamespace).Get("test-machine-deployment", metav1.GetOptions{})
+					machineDployment.Spec.Replicas = 2
+					_, updateErr := c.ControlKubeCluster.McmClient.MachineV1alpha1().MachineDeployments(c.controlClusterNamespace).Update(machineDployment)
+					return updateErr
+				})
+				By("checking for no update errors")
+				Expect(retryErr).NotTo(HaveOccurred())
 			})
 			It("should remove 4 nodes from target cluster", func() {
+				By("checking number of ready nodes are 2 more than initial")
 				Eventually(c.TargetKubeCluster.NumberOfReadyNodes, 300, 5).Should(BeNumerically("==", initialNodes+2))
 			})
 			It("should freeze and unfreeze machineset temporarily", func() {
-				By("Reading log file")
-				data, err := ioutil.ReadFile(c.mcm_logFile)
+				By("Reading log file not erroring")
+				_, err := os.ReadFile(c.mcm_logFile)
 				Expect(err).NotTo(HaveOccurred())
+
 				By("Searching for Froze in mcm log file")
-				matched, _ := regexp.Match(` Froze MachineSet`, data)
-				Expect(matched).To(BeTrue())
+				frozeRegexp, _ := regexp.Compile(` Froze MachineSet`)
+				Eventually(func() bool {
+					data, _ := ioutil.ReadFile(c.mcm_logFile)
+					return frozeRegexp.Match(data)
+				}, 300, 5).Should(BeTrue())
+
 				By("Searching Unfroze in mcm log file")
-				matched, err = regexp.Match(` Unfroze MachineSet`, data)
-				Expect(matched).To(BeTrue())
-				Expect(err).NotTo(HaveOccurred())
+				unfrozeRegexp, _ := regexp.Compile(` Unfroze MachineSet`)
+				Eventually(func() bool {
+					data, _ := ioutil.ReadFile(c.mcm_logFile)
+					return unfrozeRegexp.Match(data)
+				}, 300, 5).Should(BeTrue())
 			})
 		})
-		Context("Updation to v2 machine-class and replicas=3", func() {
+		Context("Updation to v2 machine-class and replicas=4", func() {
 			// update machine type -> machineDeployment.spec.template.spec.class.name = "test-mc-dummy"
 			// scale up replicas by 4
 			// To-Do: Add check for rolling update completion (updatedReplicas check)
@@ -656,40 +636,36 @@ func (c *IntegrationTestFramework) ControllerTests() {
 				retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 					machineDployment, _ := c.ControlKubeCluster.McmClient.MachineV1alpha1().MachineDeployments(c.controlClusterNamespace).Get("test-machine-deployment", metav1.GetOptions{})
 					machineDployment.Spec.Template.Spec.Class.Name = c.testMachineClassResources[1]
-					machineDployment.Spec.Replicas = 3
+					machineDployment.Spec.Replicas = 4
 					_, updateErr := c.ControlKubeCluster.McmClient.MachineV1alpha1().MachineDeployments(c.controlClusterNamespace).Update(machineDployment)
 					return updateErr
 				})
 				//Check there is no error occured
-				By("not returning error")
+				By("checking for no update errors")
 				Expect(retryErr).NotTo(HaveOccurred())
-				By("updatedReplicas to be 2")
-				Eventually(c.ControlKubeCluster.GetUpdatedReplicasCount("test-machine-deployment", c.controlClusterNamespace), 1800, 5).Should(BeNumerically("==", 2))
-				By("number of ready nodes be 3 more")
-				Eventually(c.TargetKubeCluster.NumberOfReadyNodes, 1800, 5).Should(BeNumerically("==", initialNodes+3))
+				By("updatedReplicas to be 4")
+				Eventually(c.ControlKubeCluster.GetUpdatedReplicasCount("test-machine-deployment", c.controlClusterNamespace), 1800, 5).Should(BeNumerically("==", 4))
+				By("number of ready nodes be 4 more")
+				Eventually(c.TargetKubeCluster.NumberOfReadyNodes, 1800, 5).Should(BeNumerically("==", initialNodes+4))
 			})
 		})
 		Context("Deletion", func() {
-			var initialNodes, deploymentReplica int32
+			var deploymentReplica int16
 			Context("When there are machine deployment(s) available in control cluster", func() {
-				It("should not lead to errors", func() {
-					initialNodes = int32(c.TargetKubeCluster.NumberOfNodes())
+				It("should not lead to errors and list only initial nodes", func() {
 					machineDeployment, err := c.ControlKubeCluster.McmClient.MachineV1alpha1().MachineDeployments(c.controlClusterNamespace).Get("test-machine-deployment", metav1.GetOptions{})
 					if err == nil {
 						// Keep count of nodes available
-						deploymentReplica = machineDeployment.Spec.Replicas
+						deploymentReplica = int16(machineDeployment.Spec.Replicas)
 						//delete machine resource
-						Expect(c.ControlKubeCluster.McmClient.MachineV1alpha1().MachineDeployments(c.controlClusterNamespace).Delete("test-machine-deployment", &metav1.DeleteOptions{})).Should(BeNil(), "No Errors while deleting machine deployment")
-					}
-				})
-				It("should list existing nodes-3 in target cluster", func() {
-					if initialNodes != 0 {
+						By("checking for no errors during deletion")
+						Expect(c.ControlKubeCluster.McmClient.MachineV1alpha1().MachineDeployments(c.controlClusterNamespace).Delete("test-machine-deployment", &metav1.DeleteOptions{})).Should(BeNil())
+						By("Waiting until number of ready nodes is eual to number of initial  nodes")
 						Eventually(c.TargetKubeCluster.NumberOfNodes, 300, 5).Should(BeNumerically("==", initialNodes-deploymentReplica))
 					}
 				})
 			})
 		})
-
 	})
 
 	// Testcase #03 | Orphaned Resources
@@ -747,8 +723,23 @@ func (c *IntegrationTestFramework) Cleanup() {
 			log.Println(err.Error())
 		}
 
-		c.ControlKubeCluster.McmClient.MachineV1alpha1().MachineClasses(c.controlClusterNamespace).Delete(c.testMachineClassResources[0], &metav1.DeleteOptions{})
-		c.ControlKubeCluster.McmClient.MachineV1alpha1().MachineClasses(c.controlClusterNamespace).Delete(c.testMachineClassResources[1], &metav1.DeleteOptions{})
+		for _, machineClassName := range c.testMachineClassResources {
+			// Check and delete machine class resource
+			_, err = c.ControlKubeCluster.McmClient.MachineV1alpha1().MachineClasses(c.controlClusterNamespace).Get(machineClassName, metav1.GetOptions{})
+			if err == nil {
+				log.Printf("deleting %s machineclass", machineClassName)
+				watchMachineClass, _ := c.ControlKubeCluster.McmClient.MachineV1alpha1().MachineClasses(c.controlClusterNamespace).Watch(metav1.ListOptions{TimeoutSeconds: &timeout}) //ResourceVersion: machineObj.ResourceVersion
+				for event := range watchMachineClass.ResultChan() {
+					c.ControlKubeCluster.McmClient.MachineV1alpha1().MachineClasses(c.controlClusterNamespace).Delete(machineClassName, &metav1.DeleteOptions{})
+					if event.Type == watch.Deleted {
+						watchMachineClass.Stop()
+						log.Println("machineclass deleted")
+					}
+				}
+			} else {
+				log.Println(err.Error())
+			}
+		}
 	}
 	if !c.ControlKubeCluster.IsSeed(c.TargetKubeCluster) {
 		log.Println("Initiating goroutine cancel via context done")
