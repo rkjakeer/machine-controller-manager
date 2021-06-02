@@ -1,0 +1,38 @@
+package helpers
+
+import (
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+//ProbeNodes tries to probe for nodes. Indirectly it checks whether the cluster is accessible.
+// If not accessible, then it returns an error
+func (c *Cluster) ProbeNodes() error {
+	_, err := c.Clientset.CoreV1().Nodes().List(metav1.ListOptions{})
+	return err
+}
+
+//getNodes tries to retrieve the list of node objects in the cluster.
+func (c *Cluster) getNodes() (*v1.NodeList, error) {
+	return c.Clientset.CoreV1().Nodes().List(metav1.ListOptions{})
+}
+
+//NumberOfReadyNodes tries to retrieve the list of node objects in the cluster.
+func (c *Cluster) NumberOfReadyNodes() int16 {
+	nodes, _ := c.getNodes()
+	count := int16(0)
+	for _, n := range nodes.Items {
+		for _, nodeCondition := range n.Status.Conditions {
+			if nodeCondition.Type == "Ready" && nodeCondition.Status == "True" {
+				count += 1
+			}
+		}
+	}
+	return count
+}
+
+//NumberOfNodes tries to retrieve the list of node objects in the cluster.
+func (c *Cluster) NumberOfNodes() int16 {
+	nodes, _ := c.getNodes()
+	return int16(len(nodes.Items))
+}
