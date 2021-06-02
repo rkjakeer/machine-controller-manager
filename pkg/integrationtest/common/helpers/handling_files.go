@@ -4,18 +4,22 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
 
 	v1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	mcmscheme "github.com/gardener/machine-controller-manager/pkg/client/clientset/versioned/scheme"
+	v1 "k8s.io/api/apps/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apiextensionsscheme "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
+	scheme "k8s.io/client-go/kubernetes/scheme"
 )
 
 // parsek8sYaml reads a yaml file and parses it based on the scheme
@@ -25,7 +29,7 @@ func parseK8sYaml(filepath string) ([]runtime.Object, []*schema.GroupVersionKind
 		return nil, nil, err
 	}
 
-	acceptedK8sTypes := regexp.MustCompile(`(Role|ClusterRole|RoleBinding|ClusterRoleBinding|ServiceAccount|CustomResourceDefinition)`)
+	acceptedK8sTypes := regexp.MustCompile(`(Role|ClusterRole|RoleBinding|ClusterRoleBinding|ServiceAccount|CustomResourceDefinition|kind: Deployment)`)
 	acceptedMCMTypes := regexp.MustCompile(`(MachineClass|Machine)`)
 	fileAsString := string(fileR[:])
 	sepYamlfiles := strings.Split(fileAsString, "---")
@@ -54,6 +58,17 @@ func parseK8sYaml(filepath string) ([]runtime.Object, []*schema.GroupVersionKind
 				retKind = append(retKind, groupVersionKind)
 				retObj = append(retObj, obj)
 			}
+		} else if acceptedK8sTypes.Match([]byte(f)) {
+			decode := scheme.Codecs.UniversalDeserializer().Decode
+			obj, groupVersionKind, err := decode([]byte(f), nil, nil)
+			if err != nil {
+				log.Println(fmt.Sprintf("Error while decoding YAML object. Err was: %s", err))
+				retErr = err
+				continue
+			}
+			retKind = append(retKind, groupVersionKind)
+			retObj = append(retObj, obj)
+
 		} else {
 			decode := mcmscheme.Codecs.UniversalDeserializer().Decode
 			obj, groupVersionKind, err := decode([]byte(f), nil, nil)
@@ -73,8 +88,8 @@ func parseK8sYaml(filepath string) ([]runtime.Object, []*schema.GroupVersionKind
 	return retObj, retKind, retErr
 }
 
-// ApplyYamlFile uses yaml to create resources in kubernetes
-func (c *Cluster) ApplyYamlFile(filePath string, namespace string) error {
+// applyFile uses yaml to create resources in kubernetes
+func (c *Cluster) applyFile(filePath string, namespace string) error {
 	/* TO-DO: This function checks for the availability of filePath
 	if available, then apply that file to kubernetes cluster c
 	*/
@@ -99,20 +114,26 @@ func (c *Cluster) ApplyYamlFile(filePath string, namespace string) error {
 					return err
 				}
 			case "MachineClass":
-				crd := obj.(*v1alpha1.MachineClass)
-				_, err := c.McmClient.MachineV1alpha1().MachineClasses(namespace).Create(crd)
+				resource := obj.(*v1alpha1.MachineClass)
+				_, err := c.McmClient.MachineV1alpha1().MachineClasses(namespace).Create(resource)
 				if err != nil {
 					return err
 				}
 			case "Machine":
-				crd := obj.(*v1alpha1.Machine)
-				_, err := c.McmClient.MachineV1alpha1().Machines(namespace).Create(crd)
+				resource := obj.(*v1alpha1.Machine)
+				_, err := c.McmClient.MachineV1alpha1().Machines(namespace).Create(resource)
 				if err != nil {
 					return err
 				}
 			case "MachineDeployment":
-				crd := obj.(*v1alpha1.MachineDeployment)
-				_, err := c.McmClient.MachineV1alpha1().MachineDeployments(namespace).Create(crd)
+				resource := obj.(*v1alpha1.MachineDeployment)
+				_, err := c.McmClient.MachineV1alpha1().MachineDeployments(namespace).Create(resource)
+				if err != nil {
+					return err
+				}
+			case "Deployment":
+				resource := obj.(*v1.Deployment)
+				_, err := c.Clientset.AppsV1().Deployments(namespace).Create(resource)
 				if err != nil {
 					return err
 				}
@@ -151,4 +172,55 @@ func (c *Cluster) CheckEstablished(crdName string) error {
 		return false, err
 	})
 	return err
+}
+
+func (c *Cluster) ApplyFiles(source string, namespace string) error {
+	var files []string
+	err := filepath.Walk(source, func(path string, info os.FileInfo, err error) error {
+		files = append(files, path)
+		return nil
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	for _, file := range files {
+		// log.Println(file)
+		fi, err := os.Stat(file)
+		if err != nil {
+			log.Println("Error: file does not exist!")
+			return err
+		}
+
+		switch mode := fi.Mode(); {
+		case mode.IsDir():
+			// do directory stuff
+			log.Printf("%s is a directory.\n", file)
+		case mode.IsRegular():
+			// do file stuff
+			err := c.applyFile(file, namespace)
+			if err != nil {
+				//Ignore error if it says the crd already exists
+				if !strings.Contains(err.Error(), "already exists") {
+					log.Printf("Failed to apply yaml file %s", file)
+					//return err
+				}
+			}
+			log.Printf("file %s has been successfully applied to cluster", file)
+		}
+	}
+	return nil
+}
+
+func Rotate(fileName string) {
+	/*
+	  startMachineController starts the machine controller
+	*/
+	_, err := os.Stat(fileName)
+	if err == nil { // !strings.Contains(err.Error(), "no such file or directory") {
+		for i := 9; i > 0; i-- {
+			os.Rename(fmt.Sprintf("%s.%d", fileName, i), fmt.Sprintf("%s.%d", fileName, i+1))
+		}
+		os.Rename(fileName, fmt.Sprintf("%s.%d", fileName, 1))
+	}
 }
