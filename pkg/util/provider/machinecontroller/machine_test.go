@@ -258,7 +258,7 @@ var _ = Describe("machine", func() {
 					coreObjects = append(coreObjects, o)
 				}
 
-				controller, trackers := createController(stop, objMeta.Namespace, machineObjects, nil, coreObjects, nil)
+				controller, trackers := createController(stop, objMeta.Namespace, machineObjects, coreObjects, nil, nil)
 				defer trackers.Stop()
 
 				waitForCacheSync(stop, controller)
@@ -401,7 +401,8 @@ var _ = Describe("machine", func() {
 					nil,
 				)
 
-				controller, trackers := createController(stop, objMeta.Namespace, machineObjects, nil, coreObjects, fakedriver)
+				controller, trackers := createController(stop, objMeta.Namespace, machineObjects, coreObjects, nil, fakedriver)
+
 				defer trackers.Stop()
 
 				waitForCacheSync(stop, controller)
@@ -413,7 +414,8 @@ var _ = Describe("machine", func() {
 				machineClass, err := controller.controlMachineClient.MachineClasses(objMeta.Namespace).Get(machine.Spec.Class.Name, metav1.GetOptions{})
 				Expect(err).ToNot(HaveOccurred())
 
-				secret, err := controller.targetCoreClient.CoreV1().Secrets(objMeta.Namespace).Get(machineClass.SecretRef.Name, metav1.GetOptions{})
+				secret, err := controller.controlCoreClient.CoreV1().Secrets(objMeta.Namespace).Get(machineClass.SecretRef.Name, metav1.GetOptions{})
+
 				Expect(err).ToNot(HaveOccurred())
 
 				retry, err := controller.triggerCreationFlow(
@@ -438,52 +440,6 @@ var _ = Describe("machine", func() {
 				Expect(actual.Status.CurrentStatus.Phase).To(Equal(data.expect.machine.Status.CurrentStatus.Phase))
 			},
 
-			Entry("Machine creation in process. Machine finalizers are UPDATED", &data{
-				setup: setup{
-					secrets: []*corev1.Secret{
-						{
-							ObjectMeta: *newObjectMeta(objMeta, 0),
-						},
-					},
-					machineClaasses: []*v1alpha1.MachineClass{
-						{
-							ObjectMeta: *newObjectMeta(objMeta, 0),
-							SecretRef:  newSecretReference(objMeta, 0),
-						},
-					},
-					machines: newMachines(1, &v1alpha1.MachineTemplateSpec{
-						ObjectMeta: *newObjectMeta(objMeta, 0),
-						Spec: v1alpha1.MachineSpec{
-							Class: v1alpha1.ClassSpec{
-								Kind: "MachineClass",
-								Name: "machine-0",
-							},
-						},
-					}, nil, nil, nil, nil, false, metav1.Now()),
-				},
-				action: action{
-					machine: "machine-0",
-					fakeDriver: &driver.FakeDriver{
-						VMExists:   false,
-						ProviderID: "fakeID-0",
-						NodeName:   "fakeNode-0",
-						Err:        nil,
-					},
-				},
-				expect: expect{
-					machine: newMachine(&v1alpha1.MachineTemplateSpec{
-						ObjectMeta: *newObjectMeta(objMeta, 0),
-						Spec: v1alpha1.MachineSpec{
-							Class: v1alpha1.ClassSpec{
-								Kind: "MachineClass",
-								Name: "machineClass",
-							},
-						},
-					}, nil, nil, nil, nil, true, metav1.Now()),
-					err:   fmt.Errorf("Machine creation in process. Machine finalizers are UPDATED"),
-					retry: machineutils.ShortRetry,
-				},
-			}),
 			Entry("Machine creation succeeds with object UPDATE", &data{
 				setup: setup{
 					secrets: []*corev1.Secret{
@@ -913,12 +869,14 @@ var _ = Describe("machine", func() {
 					machineObjects = append(machineObjects, o)
 				}
 
-				coreObjects := []runtime.Object{}
+				controlCoreObjects := []runtime.Object{}
+				targetCoreObjects := []runtime.Object{}
+
 				for _, o := range data.setup.secrets {
-					coreObjects = append(coreObjects, o)
+					controlCoreObjects = append(controlCoreObjects, o)
 				}
 				for _, o := range data.setup.nodes {
-					coreObjects = append(coreObjects, o)
+					targetCoreObjects = append(targetCoreObjects, o)
 				}
 
 				fakeDriver := driver.NewFakeDriver(
@@ -930,7 +888,8 @@ var _ = Describe("machine", func() {
 					nil,
 				)
 
-				controller, trackers := createController(stop, objMeta.Namespace, machineObjects, nil, coreObjects, fakeDriver)
+				controller, trackers := createController(stop, objMeta.Namespace, machineObjects, controlCoreObjects, targetCoreObjects, fakeDriver)
+
 				defer trackers.Stop()
 				waitForCacheSync(stop, controller)
 
@@ -941,7 +900,7 @@ var _ = Describe("machine", func() {
 				machineClass, err := controller.controlMachineClient.MachineClasses(objMeta.Namespace).Get(machine.Spec.Class.Name, metav1.GetOptions{})
 				Expect(err).ToNot(HaveOccurred())
 
-				secret, err := controller.targetCoreClient.CoreV1().Secrets(objMeta.Namespace).Get(machineClass.SecretRef.Name, metav1.GetOptions{})
+				secret, err := controller.controlCoreClient.CoreV1().Secrets(objMeta.Namespace).Get(machineClass.SecretRef.Name, metav1.GetOptions{})
 				Expect(err).ToNot(HaveOccurred())
 
 				if data.setup.fakeResourceActions != nil {
@@ -1568,6 +1527,427 @@ var _ = Describe("machine", func() {
 							},
 							LastOperation: v1alpha1.LastOperation{
 								Description:    fmt.Sprintf("Skipping drain as machine is NotReady for over 5minutes. %s", machineutils.InitiateVMDeletion),
+								State:          v1alpha1.MachineStateProcessing,
+								Type:           v1alpha1.MachineOperationDelete,
+								LastUpdateTime: metav1.Now(),
+							},
+						},
+						nil,
+						map[string]string{
+							machineutils.MachinePriority: "3",
+						},
+						map[string]string{
+							"node": "fakeID-0",
+						},
+						true,
+						metav1.Now(),
+					),
+				},
+			}),
+			Entry("Drain skipping as machine is in ReadonlyFilesystem for a long time (5 minutes)", &data{
+				setup: setup{
+					secrets: []*corev1.Secret{
+						{
+							ObjectMeta: *newObjectMeta(objMeta, 0),
+						},
+					},
+					machineClasses: []*v1alpha1.MachineClass{
+						{
+							ObjectMeta: *newObjectMeta(objMeta, 0),
+							SecretRef:  newSecretReference(objMeta, 0),
+						},
+					},
+					machines: newMachines(
+						1,
+						&v1alpha1.MachineTemplateSpec{
+							ObjectMeta: *newObjectMeta(objMeta, 0),
+							Spec: v1alpha1.MachineSpec{
+								Class: v1alpha1.ClassSpec{
+									Kind: "MachineClass",
+									Name: "machine-0",
+								},
+								ProviderID: "fakeID",
+							},
+						},
+						&v1alpha1.MachineStatus{
+							Node: "fakeNode",
+							CurrentStatus: v1alpha1.CurrentStatus{
+								Phase:          v1alpha1.MachineTerminating,
+								LastUpdateTime: metav1.Now(),
+							},
+							LastOperation: v1alpha1.LastOperation{
+								Description:    machineutils.InitiateDrain,
+								State:          v1alpha1.MachineStateProcessing,
+								Type:           v1alpha1.MachineOperationDelete,
+								LastUpdateTime: metav1.Now(),
+							},
+							Conditions: []corev1.NodeCondition{
+								{
+									Type:               "ReadonlyFilesystem",
+									Status:             corev1.ConditionTrue,
+									LastTransitionTime: metav1.NewTime(time.Now().Add(-6 * time.Minute)),
+								},
+							},
+						},
+						nil,
+						map[string]string{
+							machineutils.MachinePriority: "3",
+						},
+						map[string]string{
+							"node": "fakeID-0",
+						},
+						true,
+						metav1.Now(),
+					),
+				},
+				action: action{
+					machine: "machine-0",
+					fakeDriver: &driver.FakeDriver{
+						VMExists:   true,
+						ProviderID: "fakeID-0",
+						NodeName:   "fakeNode-0",
+						Err:        nil,
+					},
+				},
+				expect: expect{
+					err:   fmt.Errorf("Skipping drain as machine is in ReadonlyFilesystem for over 5minutes. %s", machineutils.InitiateVMDeletion),
+					retry: machineutils.ShortRetry,
+					machine: newMachine(
+						&v1alpha1.MachineTemplateSpec{
+							ObjectMeta: *newObjectMeta(objMeta, 0),
+							Spec: v1alpha1.MachineSpec{
+								Class: v1alpha1.ClassSpec{
+									Kind: "MachineClass",
+									Name: "machine-0",
+								},
+								ProviderID: "fakeID",
+							},
+						},
+						&v1alpha1.MachineStatus{
+							Node: "fakeNode",
+							CurrentStatus: v1alpha1.CurrentStatus{
+								Phase:          v1alpha1.MachineTerminating,
+								LastUpdateTime: metav1.Now(),
+							},
+							LastOperation: v1alpha1.LastOperation{
+								Description:    fmt.Sprintf("Skipping drain as machine is in ReadonlyFilesystem for over 5minutes. %s", machineutils.InitiateVMDeletion),
+								State:          v1alpha1.MachineStateProcessing,
+								Type:           v1alpha1.MachineOperationDelete,
+								LastUpdateTime: metav1.Now(),
+							},
+						},
+						nil,
+						map[string]string{
+							machineutils.MachinePriority: "3",
+						},
+						map[string]string{
+							"node": "fakeID-0",
+						},
+						true,
+						metav1.Now(),
+					),
+				},
+			}),
+			Entry("Drain skipping as machine is NotReady for a long time(5 min) ,also ReadonlyFilesystem is true for a long time (5 minutes)", &data{
+				setup: setup{
+					secrets: []*corev1.Secret{
+						{
+							ObjectMeta: *newObjectMeta(objMeta, 0),
+						},
+					},
+					machineClasses: []*v1alpha1.MachineClass{
+						{
+							ObjectMeta: *newObjectMeta(objMeta, 0),
+							SecretRef:  newSecretReference(objMeta, 0),
+						},
+					},
+					machines: newMachines(
+						1,
+						&v1alpha1.MachineTemplateSpec{
+							ObjectMeta: *newObjectMeta(objMeta, 0),
+							Spec: v1alpha1.MachineSpec{
+								Class: v1alpha1.ClassSpec{
+									Kind: "MachineClass",
+									Name: "machine-0",
+								},
+								ProviderID: "fakeID",
+							},
+						},
+						&v1alpha1.MachineStatus{
+							Node: "fakeNode",
+							CurrentStatus: v1alpha1.CurrentStatus{
+								Phase:          v1alpha1.MachineTerminating,
+								LastUpdateTime: metav1.Now(),
+							},
+							LastOperation: v1alpha1.LastOperation{
+								Description:    machineutils.InitiateDrain,
+								State:          v1alpha1.MachineStateProcessing,
+								Type:           v1alpha1.MachineOperationDelete,
+								LastUpdateTime: metav1.Now(),
+							},
+							Conditions: []corev1.NodeCondition{
+								{
+									Type:               "ReadonlyFilesystem",
+									Status:             corev1.ConditionTrue,
+									LastTransitionTime: metav1.NewTime(time.Now().Add(-6 * time.Minute)),
+								},
+								{
+									Type:               corev1.NodeReady,
+									Status:             corev1.ConditionFalse,
+									LastTransitionTime: metav1.NewTime(time.Now().Add(-6 * time.Minute)),
+								},
+							},
+						},
+						nil,
+						map[string]string{
+							machineutils.MachinePriority: "3",
+						},
+						map[string]string{
+							"node": "fakeID-0",
+						},
+						true,
+						metav1.Now(),
+					),
+				},
+				action: action{
+					machine: "machine-0",
+					fakeDriver: &driver.FakeDriver{
+						VMExists:   true,
+						ProviderID: "fakeID-0",
+						NodeName:   "fakeNode-0",
+						Err:        nil,
+					},
+				},
+				expect: expect{
+					err:   fmt.Errorf("Skipping drain as machine is NotReady for over 5minutes. %s", machineutils.InitiateVMDeletion),
+					retry: machineutils.ShortRetry,
+					machine: newMachine(
+						&v1alpha1.MachineTemplateSpec{
+							ObjectMeta: *newObjectMeta(objMeta, 0),
+							Spec: v1alpha1.MachineSpec{
+								Class: v1alpha1.ClassSpec{
+									Kind: "MachineClass",
+									Name: "machine-0",
+								},
+								ProviderID: "fakeID",
+							},
+						},
+						&v1alpha1.MachineStatus{
+							Node: "fakeNode",
+							CurrentStatus: v1alpha1.CurrentStatus{
+								Phase:          v1alpha1.MachineTerminating,
+								LastUpdateTime: metav1.Now(),
+							},
+							LastOperation: v1alpha1.LastOperation{
+								Description:    fmt.Sprintf("Skipping drain as machine is NotReady for over 5minutes. %s", machineutils.InitiateVMDeletion),
+								State:          v1alpha1.MachineStateProcessing,
+								Type:           v1alpha1.MachineOperationDelete,
+								LastUpdateTime: metav1.Now(),
+							},
+						},
+						nil,
+						map[string]string{
+							machineutils.MachinePriority: "3",
+						},
+						map[string]string{
+							"node": "fakeID-0",
+						},
+						true,
+						metav1.Now(),
+					),
+				},
+			}),
+			Entry("No Drain skipping as ReadonlyFilesystem is true for a short time(<5min)", &data{
+				setup: setup{
+					secrets: []*corev1.Secret{
+						{
+							ObjectMeta: *newObjectMeta(objMeta, 0),
+						},
+					},
+					machineClasses: []*v1alpha1.MachineClass{
+						{
+							ObjectMeta: *newObjectMeta(objMeta, 0),
+							SecretRef:  newSecretReference(objMeta, 0),
+						},
+					},
+					machines: newMachines(
+						1,
+						&v1alpha1.MachineTemplateSpec{
+							ObjectMeta: *newObjectMeta(objMeta, 0),
+							Spec: v1alpha1.MachineSpec{
+								Class: v1alpha1.ClassSpec{
+									Kind: "MachineClass",
+									Name: "machine-0",
+								},
+								ProviderID: "fakeID",
+							},
+						},
+						&v1alpha1.MachineStatus{
+							Node: "fakeNode",
+							CurrentStatus: v1alpha1.CurrentStatus{
+								Phase:          v1alpha1.MachineTerminating,
+								LastUpdateTime: metav1.Now(),
+							},
+							LastOperation: v1alpha1.LastOperation{
+								Description:    machineutils.InitiateDrain,
+								State:          v1alpha1.MachineStateProcessing,
+								Type:           v1alpha1.MachineOperationDelete,
+								LastUpdateTime: metav1.Now(),
+							},
+							Conditions: []corev1.NodeCondition{
+								{
+									Type:               "ReadonlyFilesystem",
+									Status:             corev1.ConditionTrue,
+									LastTransitionTime: metav1.NewTime(time.Now().Add(-2 * time.Minute)),
+								},
+							},
+						},
+						nil,
+						map[string]string{
+							machineutils.MachinePriority: "3",
+						},
+						map[string]string{
+							"node": "fakeID-0",
+						},
+						true,
+						metav1.Now(),
+					),
+				},
+				action: action{
+					machine: "machine-0",
+					fakeDriver: &driver.FakeDriver{
+						VMExists:   true,
+						ProviderID: "fakeID-0",
+						NodeName:   "fakeNode-0",
+						Err:        nil,
+					},
+				},
+				expect: expect{
+					err:   fmt.Errorf("Machine deletion in process. Drain successful. %s", machineutils.InitiateVMDeletion),
+					retry: machineutils.ShortRetry,
+					machine: newMachine(
+						&v1alpha1.MachineTemplateSpec{
+							ObjectMeta: *newObjectMeta(objMeta, 0),
+							Spec: v1alpha1.MachineSpec{
+								Class: v1alpha1.ClassSpec{
+									Kind: "MachineClass",
+									Name: "machine-0",
+								},
+								ProviderID: "fakeID",
+							},
+						},
+						&v1alpha1.MachineStatus{
+							Node: "fakeNode",
+							CurrentStatus: v1alpha1.CurrentStatus{
+								Phase:          v1alpha1.MachineTerminating,
+								LastUpdateTime: metav1.Now(),
+							},
+							LastOperation: v1alpha1.LastOperation{
+								Description:    fmt.Sprintf("Drain successful. %s", machineutils.InitiateVMDeletion),
+								State:          v1alpha1.MachineStateProcessing,
+								Type:           v1alpha1.MachineOperationDelete,
+								LastUpdateTime: metav1.Now(),
+							},
+						},
+						nil,
+						map[string]string{
+							machineutils.MachinePriority: "3",
+						},
+						map[string]string{
+							"node": "fakeID-0",
+						},
+						true,
+						metav1.Now(),
+					),
+				},
+			}),
+			Entry("No Drain skipping as ReadonlyFilesystem is false", &data{
+				setup: setup{
+					secrets: []*corev1.Secret{
+						{
+							ObjectMeta: *newObjectMeta(objMeta, 0),
+						},
+					},
+					machineClasses: []*v1alpha1.MachineClass{
+						{
+							ObjectMeta: *newObjectMeta(objMeta, 0),
+							SecretRef:  newSecretReference(objMeta, 0),
+						},
+					},
+					machines: newMachines(
+						1,
+						&v1alpha1.MachineTemplateSpec{
+							ObjectMeta: *newObjectMeta(objMeta, 0),
+							Spec: v1alpha1.MachineSpec{
+								Class: v1alpha1.ClassSpec{
+									Kind: "MachineClass",
+									Name: "machine-0",
+								},
+								ProviderID: "fakeID",
+							},
+						},
+						&v1alpha1.MachineStatus{
+							Node: "fakeNode",
+							CurrentStatus: v1alpha1.CurrentStatus{
+								Phase:          v1alpha1.MachineTerminating,
+								LastUpdateTime: metav1.Now(),
+							},
+							LastOperation: v1alpha1.LastOperation{
+								Description:    machineutils.InitiateDrain,
+								State:          v1alpha1.MachineStateProcessing,
+								Type:           v1alpha1.MachineOperationDelete,
+								LastUpdateTime: metav1.Now(),
+							},
+							Conditions: []corev1.NodeCondition{
+								{
+									Type:               "ReadonlyFilesystem",
+									Status:             corev1.ConditionFalse,
+									LastTransitionTime: metav1.NewTime(time.Now().Add(-6 * time.Minute)),
+								},
+							},
+						},
+						nil,
+						map[string]string{
+							machineutils.MachinePriority: "3",
+						},
+						map[string]string{
+							"node": "fakeID-0",
+						},
+						true,
+						metav1.Now(),
+					),
+				},
+				action: action{
+					machine: "machine-0",
+					fakeDriver: &driver.FakeDriver{
+						VMExists:   true,
+						ProviderID: "fakeID-0",
+						NodeName:   "fakeNode-0",
+						Err:        nil,
+					},
+				},
+				expect: expect{
+					err:   fmt.Errorf("Machine deletion in process. Drain successful. %s", machineutils.InitiateVMDeletion),
+					retry: machineutils.ShortRetry,
+					machine: newMachine(
+						&v1alpha1.MachineTemplateSpec{
+							ObjectMeta: *newObjectMeta(objMeta, 0),
+							Spec: v1alpha1.MachineSpec{
+								Class: v1alpha1.ClassSpec{
+									Kind: "MachineClass",
+									Name: "machine-0",
+								},
+								ProviderID: "fakeID",
+							},
+						},
+						&v1alpha1.MachineStatus{
+							Node: "fakeNode",
+							CurrentStatus: v1alpha1.CurrentStatus{
+								Phase:          v1alpha1.MachineTerminating,
+								LastUpdateTime: metav1.Now(),
+							},
+							LastOperation: v1alpha1.LastOperation{
+								Description:    fmt.Sprintf("Drain successful. %s", machineutils.InitiateVMDeletion),
 								State:          v1alpha1.MachineStateProcessing,
 								Type:           v1alpha1.MachineOperationDelete,
 								LastUpdateTime: metav1.Now(),
