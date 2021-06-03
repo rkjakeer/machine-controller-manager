@@ -13,7 +13,7 @@ spec:
     spec:
       containers:
       - name: machine-controller-manager
-        image:eu.gcr.io/gardener-project/gardener/machine-controller-manager:v0.28.0-dev-793b105c41adfc434e07107decaf1ac67fc1fd3f
+        image: eu.gcr.io/gardener-project/gardener/machine-controller-manager:v0.28.0-dev-793b105c41adfc434e07107decaf1ac67fc1fd3f
         imagePullPolicy: Always
         command:
           - ./machine-controller-manager
