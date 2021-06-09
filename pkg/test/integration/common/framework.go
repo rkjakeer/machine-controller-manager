@@ -169,7 +169,7 @@ func (c *IntegrationTestFramework) prepareMcmDeployment(mcContainerImageTag stri
 		})
 
 		err := c.ControlCluster.
-			ApplyFiles("../../../kubernetes/deployment.yaml",
+			ApplyFile("../../../kubernetes/deployment.yaml",
 				controlClusterNamespace)
 		if err != nil {
 			return err
@@ -282,11 +282,13 @@ func (c *IntegrationTestFramework) setupMachineClass() error {
 
 	if !c.ControlCluster.IsSeed(c.TargetCluster) {
 		//use yaml files
-		if err := c.ControlCluster.ApplyFiles(v1MachineClassPath, controlClusterNamespace); err != nil {
+		log.Printf("Applying machineclass yaml file: %s", v1MachineClassPath)
+		if err := c.ControlCluster.ApplyFile(v1MachineClassPath, controlClusterNamespace); err != nil {
 			return err
 		}
 		if len(v2MachineClassPath) != 0 {
-			if err := c.ControlCluster.ApplyFiles(v2MachineClassPath, controlClusterNamespace); err != nil {
+			log.Printf("Applying machineclass yaml file: %s", v2MachineClassPath)
+			if err := c.ControlCluster.ApplyFile(v2MachineClassPath, controlClusterNamespace); err != nil {
 				return err
 			}
 		} else {
@@ -382,9 +384,6 @@ func (c *IntegrationTestFramework) SetupBeforeSuite() {
 
 	}
 
-	ginkgo.By("Setup MachineClass")
-	gomega.Expect(c.setupMachineClass()).To(gomega.BeNil())
-
 	// starting controllers
 	if len(mcContainerImageTag) != 0 && len(mcmContainerImageTag) != 0 {
 
@@ -433,6 +432,9 @@ func (c *IntegrationTestFramework) SetupBeforeSuite() {
 		gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 		gomega.Expect(mcmsession.ExitCode()).Should(gomega.Equal(-1))
 	}
+
+	ginkgo.By("Setup MachineClass")
+	gomega.Expect(c.setupMachineClass()).To(gomega.BeNil())
 
 	// initialize orphan resource tracker
 	ginkgo.By("Looking for machineclass resource in the control cluster")
@@ -639,7 +641,13 @@ func (c *IntegrationTestFramework) ControllerTests() {
 				ginkgo.By("Checking for errors")
 				gomega.Expect(retryErr).NotTo(gomega.HaveOccurred())
 				ginkgo.By("UpdatedReplicas to be 4")
-				gomega.Eventually(c.ControlCluster.GetUpdatedReplicasCount("test-machine-deployment", controlClusterNamespace), 900, 5).Should(gomega.BeNumerically("==", 4))
+				gomega.Eventually(func() int {
+					machineDeployment, err := c.ControlCluster.McmClient.MachineV1alpha1().MachineDeployments(controlClusterNamespace).Get("test-machine-deployment", metav1.GetOptions{})
+					if err != nil {
+						log.Println("Failed to get deployment object")
+					}
+					return int(machineDeployment.Status.UpdatedReplicas)
+				}, 300, 5).Should(gomega.BeNumerically("==", 4))
 				ginkgo.By("Number of ready nodes be 4 more")
 				gomega.Eventually(c.TargetCluster.GetNumberOfNodes, 300, 5).Should(gomega.BeNumerically("==", initialNodes+4))
 				gomega.Eventually(c.TargetCluster.GetNumberOfReadyNodes, 300, 5).Should(gomega.BeNumerically("==", initialNodes+4))
@@ -679,7 +687,7 @@ func (c *IntegrationTestFramework) ControllerTests() {
 func (c *IntegrationTestFramework) Cleanup() {
 
 	//running locally
-	if mcsession != nil {
+	if !(len(os.Getenv("mcContainerImage")) != 0 && len(os.Getenv("mcmContainerImage")) != 0) {
 		if mcsession.ExitCode() != -1 {
 			ginkgo.By("Restarting Machine Controller ")
 			outputFile, err := helpers.RotateLogFile(mcLogFile)
