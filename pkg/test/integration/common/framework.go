@@ -478,7 +478,7 @@ func (c *IntegrationTestFramework) BeforeEachCheck() {
 // orphan resource check by invoking IsOrphanedResourcesAvailable from rti
 func (c *IntegrationTestFramework) ControllerTests() {
 	// Testcase #01 | Machine
-	ginkgo.XDescribe("machine resource", func() {
+	ginkgo.Describe("machine resource", func() {
 		var initialNodes int16
 		ginkgo.Context("creation", func() {
 			// Probe nodes currently available in target cluster
@@ -537,7 +537,7 @@ func (c *IntegrationTestFramework) ControllerTests() {
 	// Testcase #02 | machine deployment
 	ginkgo.Describe("machine deployment resource", func() {
 		var initialNodes int16 // initialization should be part of creation test logic
-		ginkgo.FContext("creation with replicas=3", func() {
+		ginkgo.Context("creation with replicas=3", func() {
 			ginkgo.It("should not lead to errors and add 3 more nodes to target cluster", func() {
 				//probe initialnodes before continuing
 				initialNodes = c.TargetCluster.GetNumberOfNodes()
@@ -622,7 +622,7 @@ func (c *IntegrationTestFramework) ControllerTests() {
 				}, 300, 5).Should(gomega.BeTrue())
 			})
 		})
-		ginkgo.XContext("updation to v2 machine-class and replicas=4", func() {
+		ginkgo.Context("updation to v2 machine-class and replicas=4", func() {
 			// update machine type -> machineDeployment.spec.template.spec.class.name = "test-mc-v2"
 			// scale up replicas by 4
 			// To-Do: Add check for rolling update completion (updatedReplicas check)
