@@ -21,7 +21,7 @@ CONTROL_KUBECONFIG := dev/target-kubeconfig.yaml
 TARGET_KUBECONFIG  := dev/target-kubeconfig.yaml
 
 LEADER_ELECT 	   := "true"
-MACHINE_SAFETY_OVERSHOOTING_PERIOD=1m
+MACHINE_SAFETY_OVERSHOOTING_PERIOD:=1m
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
