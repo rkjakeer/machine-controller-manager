@@ -1334,7 +1334,15 @@ func (absoluteSD *SECURITY_DESCRIPTOR) ToSelfRelative() (selfRelativeSD *SECURIT
 }
 
 func (selfRelativeSD *SECURITY_DESCRIPTOR) copySelfRelativeSecurityDescriptor() *SECURITY_DESCRIPTOR {
+<<<<<<< HEAD
 	sdLen := (int)(selfRelativeSD.Length())
+=======
+	sdLen := int(selfRelativeSD.Length())
+	const min = int(unsafe.Sizeof(SECURITY_DESCRIPTOR{}))
+	if sdLen < min {
+		sdLen = min
+	}
+>>>>>>> 73054235125ff300ec7fee2a3c76a4e756cc9ebf
 
 	var src []byte
 	h := (*unsafeheader.Slice)(unsafe.Pointer(&src))
@@ -1342,7 +1350,19 @@ func (selfRelativeSD *SECURITY_DESCRIPTOR) copySelfRelativeSecurityDescriptor() 
 	h.Len = sdLen
 	h.Cap = sdLen
 
+<<<<<<< HEAD
 	dst := make([]byte, sdLen)
+=======
+	const psize = int(unsafe.Sizeof(uintptr(0)))
+
+	var dst []byte
+	h = (*unsafeheader.Slice)(unsafe.Pointer(&dst))
+	alloc := make([]uintptr, (sdLen+psize-1)/psize)
+	h.Data = (*unsafeheader.Slice)(unsafe.Pointer(&alloc)).Data
+	h.Len = sdLen
+	h.Cap = sdLen
+
+>>>>>>> 73054235125ff300ec7fee2a3c76a4e756cc9ebf
 	copy(dst, src)
 	return (*SECURITY_DESCRIPTOR)(unsafe.Pointer(&dst[0]))
 }

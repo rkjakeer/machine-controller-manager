@@ -70,6 +70,7 @@ func Fchmodat(dirfd int, path string, mode uint32, flags int) (err error) {
 
 // ioctl itself should not be exposed directly, but additional get/set
 // functions for specific types are permissible.
+<<<<<<< HEAD
 
 // IoctlRetInt performs an ioctl operation specified by req on a device
 // associated with opened file descriptor fd, and returns a non-negative
@@ -105,6 +106,9 @@ func IoctlGetRTCTime(fd int) (*RTCTime, error) {
 	err := ioctl(fd, RTC_RD_TIME, uintptr(unsafe.Pointer(&value)))
 	return &value, err
 }
+=======
+// These are defined in ioctl.go and ioctl_linux.go.
+>>>>>>> 73054235125ff300ec7fee2a3c76a4e756cc9ebf
 
 // IoctlGetWatchdogInfo fetches information about a watchdog device from the
 // Linux watchdog API. For more information, see:
@@ -857,16 +861,19 @@ type SockaddrVM struct {
 	// CID and Port specify a context ID and port address for a VM socket.
 	// Guests have a unique CID, and hosts may have a well-known CID of:
 	//  - VMADDR_CID_HYPERVISOR: refers to the hypervisor process.
+	//  - VMADDR_CID_LOCAL: refers to local communication (loopback).
 	//  - VMADDR_CID_HOST: refers to other processes on the host.
-	CID  uint32
-	Port uint32
-	raw  RawSockaddrVM
+	CID   uint32
+	Port  uint32
+	Flags uint8
+	raw   RawSockaddrVM
 }
 
 func (sa *SockaddrVM) sockaddr() (unsafe.Pointer, _Socklen, error) {
 	sa.raw.Family = AF_VSOCK
 	sa.raw.Port = sa.Port
 	sa.raw.Cid = sa.CID
+	sa.raw.Flags = sa.Flags
 
 	return unsafe.Pointer(&sa.raw), SizeofSockaddrVM, nil
 }
@@ -1171,8 +1178,9 @@ func anyToSockaddr(fd int, rsa *RawSockaddrAny) (Sockaddr, error) {
 	case AF_VSOCK:
 		pp := (*RawSockaddrVM)(unsafe.Pointer(rsa))
 		sa := &SockaddrVM{
-			CID:  pp.Cid,
-			Port: pp.Port,
+			CID:   pp.Cid,
+			Port:  pp.Port,
+			Flags: pp.Flags,
 		}
 		return sa, nil
 	case AF_BLUETOOTH:
@@ -1307,7 +1315,11 @@ func anyToSockaddr(fd int, rsa *RawSockaddrAny) (Sockaddr, error) {
 func Accept(fd int) (nfd int, sa Sockaddr, err error) {
 	var rsa RawSockaddrAny
 	var len _Socklen = SizeofSockaddrAny
-	nfd, err = accept(fd, &rsa, &len)
+	// Try accept4 first for Android, then try accept for kernel older than 2.6.28
+	nfd, err = accept4(fd, &rsa, &len, 0)
+	if err == ENOSYS {
+		nfd, err = accept(fd, &rsa, &len)
+	}
 	if err != nil {
 		return
 	}

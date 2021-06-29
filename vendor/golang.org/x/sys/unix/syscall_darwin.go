@@ -378,6 +378,20 @@ func Sendfile(outfd int, infd int, offset *int64, count int) (written int, err e
 	return
 }
 
+<<<<<<< HEAD
+=======
+func GetsockoptIPMreqn(fd, level, opt int) (*IPMreqn, error) {
+	var value IPMreqn
+	vallen := _Socklen(SizeofIPMreqn)
+	errno := getsockopt(fd, level, opt, unsafe.Pointer(&value), &vallen)
+	return &value, errno
+}
+
+func SetsockoptIPMreqn(fd, level, opt int, mreq *IPMreqn) (err error) {
+	return setsockopt(fd, level, opt, unsafe.Pointer(mreq), unsafe.Sizeof(*mreq))
+}
+
+>>>>>>> 73054235125ff300ec7fee2a3c76a4e756cc9ebf
 // GetsockoptXucred is a getsockopt wrapper that returns an Xucred struct.
 // The usual level and opt are SOL_LOCAL and LOCAL_PEERCRED, respectively.
 func GetsockoptXucred(fd, level, opt int) (*Xucred, error) {
