@@ -359,15 +359,10 @@ golang.org/x/oauth2/google
 golang.org/x/oauth2/internal
 golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
-<<<<<<< HEAD
-# golang.org/x/sys v0.0.0-20210324051608-47abb6519492
+# golang.org/x/sys v0.0.0-20210514084401-e8d321eab015
 golang.org/x/sys/cpu
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/plan9
-=======
-# golang.org/x/sys v0.0.0-20210514084401-e8d321eab015
-golang.org/x/sys/internal/unsafeheader
->>>>>>> 73054235125ff300ec7fee2a3c76a4e756cc9ebf
 golang.org/x/sys/unix
 golang.org/x/sys/windows
 # golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1

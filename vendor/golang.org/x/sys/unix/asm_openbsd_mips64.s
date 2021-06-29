@@ -2,10 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-<<<<<<< HEAD:vendor/golang.org/x/sys/unix/asm_openbsd_mips64.s
-=======
 //go:build gc
->>>>>>> 73054235125ff300ec7fee2a3c76a4e756cc9ebf:vendor/golang.org/x/sys/unix/asm_openbsd_mips64.s
 // +build gc
 
 #include "textflag.h"

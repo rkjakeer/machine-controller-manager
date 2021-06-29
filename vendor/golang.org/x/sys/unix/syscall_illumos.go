@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-// Copyright 2009 The Go Authors. All rights reserved.
-=======
 // Copyright 2021 The Go Authors. All rights reserved.
->>>>>>> 73054235125ff300ec7fee2a3c76a4e756cc9ebf
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -14,11 +10,8 @@
 package unix
 
 import (
-<<<<<<< HEAD
-=======
 	"fmt"
 	"runtime"
->>>>>>> 73054235125ff300ec7fee2a3c76a4e756cc9ebf
 	"unsafe"
 )
 
@@ -136,8 +129,6 @@ func Getmsg(fd int, cl []byte, data []byte) (retCl []byte, retData []byte, flags
 	}
 	return retCl, retData, flags, nil
 }
-<<<<<<< HEAD
-=======
 
 func IoctlSetIntRetInt(fd int, req uint, arg int) (int, error) {
 	return ioctlRet(fd, req, uintptr(arg))
@@ -185,4 +176,3 @@ func (s *Strioctl) SetInt(i int) {
 func IoctlSetStrioctlRetInt(fd int, req uint, s *Strioctl) (int, error) {
 	return ioctlRet(fd, req, uintptr(unsafe.Pointer(s)))
 }
->>>>>>> 73054235125ff300ec7fee2a3c76a4e756cc9ebf

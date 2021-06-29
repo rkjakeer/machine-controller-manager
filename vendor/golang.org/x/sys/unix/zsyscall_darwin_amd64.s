@@ -122,15 +122,11 @@ DATA	·libc_utimes_trampoline_addr(SB)/8, $libc_utimes_trampoline<>(SB)
 
 TEXT libc_futimes_trampoline<>(SB),NOSPLIT,$0-0
 	JMP	libc_futimes(SB)
-<<<<<<< HEAD
-TEXT ·libc_poll_trampoline(SB),NOSPLIT,$0-0
-=======
 
 GLOBL	·libc_futimes_trampoline_addr(SB), RODATA, $8
 DATA	·libc_futimes_trampoline_addr(SB)/8, $libc_futimes_trampoline<>(SB)
 
 TEXT libc_poll_trampoline<>(SB),NOSPLIT,$0-0
->>>>>>> 73054235125ff300ec7fee2a3c76a4e756cc9ebf
 	JMP	libc_poll(SB)
 
 GLOBL	·libc_poll_trampoline_addr(SB), RODATA, $8
@@ -174,15 +170,11 @@ DATA	·libc_munlock_trampoline_addr(SB)/8, $libc_munlock_trampoline<>(SB)
 
 TEXT libc_munlockall_trampoline<>(SB),NOSPLIT,$0-0
 	JMP	libc_munlockall(SB)
-<<<<<<< HEAD
-TEXT ·libc_pipe_trampoline(SB),NOSPLIT,$0-0
-=======
 
 GLOBL	·libc_munlockall_trampoline_addr(SB), RODATA, $8
 DATA	·libc_munlockall_trampoline_addr(SB)/8, $libc_munlockall_trampoline<>(SB)
 
 TEXT libc_pipe_trampoline<>(SB),NOSPLIT,$0-0
->>>>>>> 73054235125ff300ec7fee2a3c76a4e756cc9ebf
 	JMP	libc_pipe(SB)
 
 GLOBL	·libc_pipe_trampoline_addr(SB), RODATA, $8
@@ -238,11 +230,6 @@ DATA	·libc_flistxattr_trampoline_addr(SB)/8, $libc_flistxattr_trampoline<>(SB)
 
 TEXT libc_setattrlist_trampoline<>(SB),NOSPLIT,$0-0
 	JMP	libc_setattrlist(SB)
-<<<<<<< HEAD
-TEXT ·libc_fcntl_trampoline(SB),NOSPLIT,$0-0
-	JMP	libc_fcntl(SB)
-TEXT ·libc_kill_trampoline(SB),NOSPLIT,$0-0
-=======
 
 GLOBL	·libc_setattrlist_trampoline_addr(SB), RODATA, $8
 DATA	·libc_setattrlist_trampoline_addr(SB)/8, $libc_setattrlist_trampoline<>(SB)
@@ -254,7 +241,6 @@ GLOBL	·libc_fcntl_trampoline_addr(SB), RODATA, $8
 DATA	·libc_fcntl_trampoline_addr(SB)/8, $libc_fcntl_trampoline<>(SB)
 
 TEXT libc_kill_trampoline<>(SB),NOSPLIT,$0-0
->>>>>>> 73054235125ff300ec7fee2a3c76a4e756cc9ebf
 	JMP	libc_kill(SB)
 
 GLOBL	·libc_kill_trampoline_addr(SB), RODATA, $8
@@ -328,13 +314,6 @@ DATA	·libc_clock_gettime_trampoline_addr(SB)/8, $libc_clock_gettime_trampoline<
 
 TEXT libc_close_trampoline<>(SB),NOSPLIT,$0-0
 	JMP	libc_close(SB)
-<<<<<<< HEAD
-TEXT ·libc_clonefile_trampoline(SB),NOSPLIT,$0-0
-	JMP	libc_clonefile(SB)
-TEXT ·libc_clonefileat_trampoline(SB),NOSPLIT,$0-0
-	JMP	libc_clonefileat(SB)
-TEXT ·libc_dup_trampoline(SB),NOSPLIT,$0-0
-=======
 
 GLOBL	·libc_close_trampoline_addr(SB), RODATA, $8
 DATA	·libc_close_trampoline_addr(SB)/8, $libc_close_trampoline<>(SB)
@@ -352,7 +331,6 @@ GLOBL	·libc_clonefileat_trampoline_addr(SB), RODATA, $8
 DATA	·libc_clonefileat_trampoline_addr(SB)/8, $libc_clonefileat_trampoline<>(SB)
 
 TEXT libc_dup_trampoline<>(SB),NOSPLIT,$0-0
->>>>>>> 73054235125ff300ec7fee2a3c76a4e756cc9ebf
 	JMP	libc_dup(SB)
 
 GLOBL	·libc_dup_trampoline_addr(SB), RODATA, $8
@@ -414,11 +392,6 @@ DATA	·libc_fchown_trampoline_addr(SB)/8, $libc_fchown_trampoline<>(SB)
 
 TEXT libc_fchownat_trampoline<>(SB),NOSPLIT,$0-0
 	JMP	libc_fchownat(SB)
-<<<<<<< HEAD
-TEXT ·libc_fclonefileat_trampoline(SB),NOSPLIT,$0-0
-	JMP	libc_fclonefileat(SB)
-TEXT ·libc_flock_trampoline(SB),NOSPLIT,$0-0
-=======
 
 GLOBL	·libc_fchownat_trampoline_addr(SB), RODATA, $8
 DATA	·libc_fchownat_trampoline_addr(SB)/8, $libc_fchownat_trampoline<>(SB)
@@ -430,7 +403,6 @@ GLOBL	·libc_fclonefileat_trampoline_addr(SB), RODATA, $8
 DATA	·libc_fclonefileat_trampoline_addr(SB)/8, $libc_fclonefileat_trampoline<>(SB)
 
 TEXT libc_flock_trampoline<>(SB),NOSPLIT,$0-0
->>>>>>> 73054235125ff300ec7fee2a3c76a4e756cc9ebf
 	JMP	libc_flock(SB)
 
 GLOBL	·libc_flock_trampoline_addr(SB), RODATA, $8
@@ -450,11 +422,6 @@ DATA	·libc_fsync_trampoline_addr(SB)/8, $libc_fsync_trampoline<>(SB)
 
 TEXT libc_ftruncate_trampoline<>(SB),NOSPLIT,$0-0
 	JMP	libc_ftruncate(SB)
-<<<<<<< HEAD
-TEXT ·libc_getcwd_trampoline(SB),NOSPLIT,$0-0
-	JMP	libc_getcwd(SB)
-TEXT ·libc_getdtablesize_trampoline(SB),NOSPLIT,$0-0
-=======
 
 GLOBL	·libc_ftruncate_trampoline_addr(SB), RODATA, $8
 DATA	·libc_ftruncate_trampoline_addr(SB)/8, $libc_ftruncate_trampoline<>(SB)
@@ -466,7 +433,6 @@ GLOBL	·libc_getcwd_trampoline_addr(SB), RODATA, $8
 DATA	·libc_getcwd_trampoline_addr(SB)/8, $libc_getcwd_trampoline<>(SB)
 
 TEXT libc_getdtablesize_trampoline<>(SB),NOSPLIT,$0-0
->>>>>>> 73054235125ff300ec7fee2a3c76a4e756cc9ebf
 	JMP	libc_getdtablesize(SB)
 
 GLOBL	·libc_getdtablesize_trampoline_addr(SB), RODATA, $8
@@ -534,11 +500,6 @@ DATA	·libc_getrusage_trampoline_addr(SB)/8, $libc_getrusage_trampoline<>(SB)
 
 TEXT libc_getsid_trampoline<>(SB),NOSPLIT,$0-0
 	JMP	libc_getsid(SB)
-<<<<<<< HEAD
-TEXT ·libc_gettimeofday_trampoline(SB),NOSPLIT,$0-0
-	JMP	libc_gettimeofday(SB)
-TEXT ·libc_getuid_trampoline(SB),NOSPLIT,$0-0
-=======
 
 GLOBL	·libc_getsid_trampoline_addr(SB), RODATA, $8
 DATA	·libc_getsid_trampoline_addr(SB)/8, $libc_getsid_trampoline<>(SB)
@@ -550,7 +511,6 @@ GLOBL	·libc_gettimeofday_trampoline_addr(SB), RODATA, $8
 DATA	·libc_gettimeofday_trampoline_addr(SB)/8, $libc_gettimeofday_trampoline<>(SB)
 
 TEXT libc_getuid_trampoline<>(SB),NOSPLIT,$0-0
->>>>>>> 73054235125ff300ec7fee2a3c76a4e756cc9ebf
 	JMP	libc_getuid(SB)
 
 GLOBL	·libc_getuid_trampoline_addr(SB), RODATA, $8
@@ -846,15 +806,11 @@ DATA	·libc_mmap_trampoline_addr(SB)/8, $libc_mmap_trampoline<>(SB)
 
 TEXT libc_munmap_trampoline<>(SB),NOSPLIT,$0-0
 	JMP	libc_munmap(SB)
-<<<<<<< HEAD
-TEXT ·libc_fstat64_trampoline(SB),NOSPLIT,$0-0
-=======
 
 GLOBL	·libc_munmap_trampoline_addr(SB), RODATA, $8
 DATA	·libc_munmap_trampoline_addr(SB)/8, $libc_munmap_trampoline<>(SB)
 
 TEXT libc_fstat64_trampoline<>(SB),NOSPLIT,$0-0
->>>>>>> 73054235125ff300ec7fee2a3c76a4e756cc9ebf
 	JMP	libc_fstat64(SB)
 
 GLOBL	·libc_fstat64_trampoline_addr(SB), RODATA, $8
@@ -880,11 +836,6 @@ DATA	·libc_getfsstat64_trampoline_addr(SB)/8, $libc_getfsstat64_trampoline<>(SB
 
 TEXT libc_lstat64_trampoline<>(SB),NOSPLIT,$0-0
 	JMP	libc_lstat64(SB)
-<<<<<<< HEAD
-TEXT ·libc_ptrace_trampoline(SB),NOSPLIT,$0-0
-	JMP	libc_ptrace(SB)
-TEXT ·libc_stat64_trampoline(SB),NOSPLIT,$0-0
-=======
 
 GLOBL	·libc_lstat64_trampoline_addr(SB), RODATA, $8
 DATA	·libc_lstat64_trampoline_addr(SB)/8, $libc_lstat64_trampoline<>(SB)
@@ -896,7 +847,6 @@ GLOBL	·libc_ptrace_trampoline_addr(SB), RODATA, $8
 DATA	·libc_ptrace_trampoline_addr(SB)/8, $libc_ptrace_trampoline<>(SB)
 
 TEXT libc_stat64_trampoline<>(SB),NOSPLIT,$0-0
->>>>>>> 73054235125ff300ec7fee2a3c76a4e756cc9ebf
 	JMP	libc_stat64(SB)
 
 GLOBL	·libc_stat64_trampoline_addr(SB), RODATA, $8

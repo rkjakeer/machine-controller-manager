@@ -706,10 +706,7 @@ const (
 	O_APPEND                      = 0x8
 	O_CLOEXEC                     = 0x800000
 	O_CREAT                       = 0x100
-<<<<<<< HEAD
-=======
 	O_DIRECT                      = 0x2000000
->>>>>>> 73054235125ff300ec7fee2a3c76a4e756cc9ebf
 	O_DIRECTORY                   = 0x1000000
 	O_DSYNC                       = 0x40
 	O_EXCL                        = 0x400

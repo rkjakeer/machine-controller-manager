@@ -423,8 +423,5 @@ const (
 	SYS_FACCESSAT2                   = 4439
 	SYS_PROCESS_MADVISE              = 4440
 	SYS_EPOLL_PWAIT2                 = 4441
-<<<<<<< HEAD
-=======
 	SYS_MOUNT_SETATTR                = 4442
->>>>>>> 73054235125ff300ec7fee2a3c76a4e756cc9ebf
 )

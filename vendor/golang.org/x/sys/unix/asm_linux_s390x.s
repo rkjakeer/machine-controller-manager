@@ -4,10 +4,7 @@
 
 //go:build linux && s390x && gc
 // +build linux
-<<<<<<< HEAD
-=======
 // +build s390x
->>>>>>> 73054235125ff300ec7fee2a3c76a4e756cc9ebf
 // +build gc
 
 #include "textflag.h"
