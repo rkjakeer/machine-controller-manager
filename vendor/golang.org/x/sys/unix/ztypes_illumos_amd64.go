@@ -25,14 +25,22 @@ type strbuf struct {
 	Buf    *int8
 }
 
+<<<<<<< HEAD
 type strioctl struct {
+=======
+type Strioctl struct {
+>>>>>>> 73054235125ff300ec7fee2a3c76a4e756cc9ebf
 	Cmd    int32
 	Timout int32
 	Len    int32
 	Dp     *int8
 }
 
+<<<<<<< HEAD
 type lifreq struct {
+=======
+type Lifreq struct {
+>>>>>>> 73054235125ff300ec7fee2a3c76a4e756cc9ebf
 	Name   [32]int8
 	Lifru1 [4]byte
 	Type   uint32

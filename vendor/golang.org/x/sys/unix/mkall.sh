@@ -70,6 +70,7 @@ aix_ppc64)
 	mksyscall="go run mksyscall_aix_ppc64.go -aix"
 	mktypes="GOARCH=$GOARCH go tool cgo -godefs"
 	;;
+<<<<<<< HEAD
 darwin_386)
 	mkerrors="$mkerrors -m32"
 	mksyscall="go run mksyscall.go -l32"
@@ -84,6 +85,10 @@ darwin_amd64)
 darwin_arm)
 	mkerrors="$mkerrors"
 	mksyscall="go run mksyscall.go -l32"
+=======
+darwin_amd64)
+	mkerrors="$mkerrors -m64"
+>>>>>>> 73054235125ff300ec7fee2a3c76a4e756cc9ebf
 	mktypes="GOARCH=$GOARCH go tool cgo -godefs"
 	mkasm="go run mkasm_darwin.go"
 	;;

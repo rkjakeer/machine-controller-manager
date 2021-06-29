@@ -347,6 +347,13 @@ type Dirent struct {
 	Name   [256]byte
 }
 
+<<<<<<< HEAD
+=======
+type FdSet struct {
+	Bits [64]int32
+}
+
+>>>>>>> 73054235125ff300ec7fee2a3c76a4e756cc9ebf
 // This struct is packed on z/OS so it can't be used directly.
 type Flock_t struct {
 	Type   int16

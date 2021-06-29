@@ -1016,7 +1016,14 @@ const (
 	PERF_SAMPLE_PHYS_ADDR                 = 0x80000
 	PERF_SAMPLE_AUX                       = 0x100000
 	PERF_SAMPLE_CGROUP                    = 0x200000
+<<<<<<< HEAD
 	PERF_SAMPLE_MAX                       = 0x1000000
+=======
+	PERF_SAMPLE_DATA_PAGE_SIZE            = 0x400000
+	PERF_SAMPLE_CODE_PAGE_SIZE            = 0x800000
+	PERF_SAMPLE_WEIGHT_STRUCT             = 0x1000000
+	PERF_SAMPLE_MAX                       = 0x2000000
+>>>>>>> 73054235125ff300ec7fee2a3c76a4e756cc9ebf
 	PERF_SAMPLE_BRANCH_USER_SHIFT         = 0x0
 	PERF_SAMPLE_BRANCH_KERNEL_SHIFT       = 0x1
 	PERF_SAMPLE_BRANCH_HV_SHIFT           = 0x2
@@ -3126,7 +3133,12 @@ const (
 	DEVLINK_ATTR_REMOTE_RELOAD_STATS                   = 0xa1
 	DEVLINK_ATTR_RELOAD_ACTION_INFO                    = 0xa2
 	DEVLINK_ATTR_RELOAD_ACTION_STATS                   = 0xa3
+<<<<<<< HEAD
 	DEVLINK_ATTR_MAX                                   = 0xa3
+=======
+	DEVLINK_ATTR_PORT_PCI_SF_NUMBER                    = 0xa4
+	DEVLINK_ATTR_MAX                                   = 0xa4
+>>>>>>> 73054235125ff300ec7fee2a3c76a4e756cc9ebf
 	DEVLINK_DPIPE_FIELD_MAPPING_TYPE_NONE              = 0x0
 	DEVLINK_DPIPE_FIELD_MAPPING_TYPE_IFINDEX           = 0x1
 	DEVLINK_DPIPE_MATCH_TYPE_FIELD_EXACT               = 0x0
@@ -3140,7 +3152,13 @@ const (
 	DEVLINK_RESOURCE_UNIT_ENTRY                        = 0x0
 	DEVLINK_PORT_FUNCTION_ATTR_UNSPEC                  = 0x0
 	DEVLINK_PORT_FUNCTION_ATTR_HW_ADDR                 = 0x1
+<<<<<<< HEAD
 	DEVLINK_PORT_FUNCTION_ATTR_MAX                     = 0x1
+=======
+	DEVLINK_PORT_FN_ATTR_STATE                         = 0x2
+	DEVLINK_PORT_FN_ATTR_OPSTATE                       = 0x3
+	DEVLINK_PORT_FUNCTION_ATTR_MAX                     = 0x3
+>>>>>>> 73054235125ff300ec7fee2a3c76a4e756cc9ebf
 )
 
 type FsverityDigest struct {
@@ -3509,7 +3527,12 @@ const (
 	ETHTOOL_A_LINKMODES_DUPLEX                = 0x6
 	ETHTOOL_A_LINKMODES_MASTER_SLAVE_CFG      = 0x7
 	ETHTOOL_A_LINKMODES_MASTER_SLAVE_STATE    = 0x8
+<<<<<<< HEAD
 	ETHTOOL_A_LINKMODES_MAX                   = 0x8
+=======
+	ETHTOOL_A_LINKMODES_LANES                 = 0x9
+	ETHTOOL_A_LINKMODES_MAX                   = 0x9
+>>>>>>> 73054235125ff300ec7fee2a3c76a4e756cc9ebf
 	ETHTOOL_A_LINKSTATE_UNSPEC                = 0x0
 	ETHTOOL_A_LINKSTATE_HEADER                = 0x1
 	ETHTOOL_A_LINKSTATE_LINK                  = 0x2
@@ -3698,6 +3721,24 @@ const (
 	ETHTOOL_A_TUNNEL_INFO_MAX                 = 0x2
 )
 
+<<<<<<< HEAD
+=======
+type EthtoolDrvinfo struct {
+	Cmd          uint32
+	Driver       [32]byte
+	Version      [32]byte
+	Fw_version   [32]byte
+	Bus_info     [32]byte
+	Erom_version [32]byte
+	Reserved2    [12]byte
+	N_priv_flags uint32
+	N_stats      uint32
+	Testinfo_len uint32
+	Eedump_len   uint32
+	Regdump_len  uint32
+}
+
+>>>>>>> 73054235125ff300ec7fee2a3c76a4e756cc9ebf
 type (
 	HIDRawReportDescriptor struct {
 		Size  uint32
