@@ -446,22 +446,29 @@ func (c *IntegrationTestFramework) SetupBeforeSuite() {
 	// initialize orphan resource tracker
 	ginkgo.By("Looking for machineclass resource in the control cluster")
 	machineClass, err := c.ControlCluster.McmClient.MachineV1alpha1().MachineClasses(controlClusterNamespace).Get(testMachineClassResources[0], metav1.GetOptions{})
-	if err == nil {
-		secret, err := c.ControlCluster.Clientset.CoreV1().Secrets(machineClass.SecretRef.Namespace).Get(machineClass.SecretRef.Name, metav1.GetOptions{})
-		ginkgo.By("Looking for secret resource refered in machineclass in the control cluster")
-		if err == nil {
-			ginkgo.By("Determining control cluster name")
-			clusterName, err := c.ControlCluster.ClusterName()
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-			ginkgo.By("Initializing orphan resource tracker")
-			err = c.resourcesTracker.InitializeResourcesTracker(machineClass, secret, clusterName)
-			//Check there is no error occured
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-		}
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+	ginkgo.By("Determining control cluster name")
+	clusterName, err := c.ControlCluster.ClusterName()
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+	ginkgo.By("Looking for secret resource refered in machineclass in the control cluster")
+	secret, err := c.ControlCluster.Clientset.CoreV1().Secrets(machineClass.SecretRef.Namespace).Get(machineClass.SecretRef.Name, metav1.GetOptions{})
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+	if machineClass.CredentialsSecretRef != nil {
+		ginkgo.By("Looking for credentialsSecret resource refered in machineclass in the control cluster")
+		alternateSecret, err := c.ControlCluster.Clientset.CoreV1().Secrets(machineClass.CredentialsSecretRef.Namespace).Get(machineClass.CredentialsSecretRef.Name, metav1.GetOptions{})
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		secret = alternateSecret
 	}
+
+	ginkgo.By("Initializing orphan resource tracker")
+	err = c.resourcesTracker.InitializeResourcesTracker(machineClass, secret, clusterName)
+	//Check there is no error occured
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	log.Println("orphan resource tracker initialized")
+
 }
 
 // BeforeEachCheck checks if all the nodes are ready.
@@ -600,19 +607,40 @@ func (c *IntegrationTestFramework) ControllerTests() {
 				if mcsession == nil {
 					// controllers running in pod
 					// Create log file from container log
-					outputFile, err := helpers.RotateLogFile(mcmLogFile)
+					mcmOutputFile, err := helpers.RotateLogFile(mcmLogFile)
 					gomega.Expect(err).NotTo(gomega.HaveOccurred())
-					ginkgo.By("Reading container log is leading to error")
-					mcmPod, err := c.ControlCluster.Clientset.CoreV1().Pods(controlClusterNamespace).List(metav1.ListOptions{})
+					mcOutputFile, err := helpers.RotateLogFile(mcLogFile)
 					gomega.Expect(err).NotTo(gomega.HaveOccurred())
-					readCloser, err := c.ControlCluster.Clientset.CoreV1().
-						Pods(controlClusterNamespace).
-						GetLogs(mcmPod.Items[0].Name, &coreV1.PodLogOptions{
-							Container: "machine-controller-manager",
-						}).Stream()
+					ginkgo.By("Reading container log is leading to no errors")
+					podList, err := c.ControlCluster.Clientset.CoreV1().Pods(controlClusterNamespace).List(metav1.ListOptions{
+						LabelSelector: "app=machine-controller-manager",
+					})
 					gomega.Expect(err).NotTo(gomega.HaveOccurred())
-					io.Copy(outputFile, readCloser)
-					gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+					mcmPod := podList.Items[0]
+					providerSpecificRegexp, _ := regexp.Compile("machine-controller-manager-provider-")
+					containers := mcmPod.Spec.Containers
+					for i := range containers {
+						if providerSpecificRegexp.Match([]byte(containers[i].Image)) {
+							readCloser, err := c.ControlCluster.Clientset.CoreV1().
+								Pods(controlClusterNamespace).
+								GetLogs(mcmPod.Name, &coreV1.PodLogOptions{
+									Container: containers[i].Name,
+								}).Stream()
+							gomega.Expect(err).NotTo(gomega.HaveOccurred())
+							io.Copy(mcOutputFile, readCloser)
+							gomega.Expect(err).NotTo(gomega.HaveOccurred())
+						} else {
+							readCloser, err := c.ControlCluster.Clientset.CoreV1().
+								Pods(controlClusterNamespace).
+								GetLogs(mcmPod.Name, &coreV1.PodLogOptions{
+									Container: containers[i].Name,
+								}).Stream()
+							gomega.Expect(err).NotTo(gomega.HaveOccurred())
+							io.Copy(mcmOutputFile, readCloser)
+							gomega.Expect(err).NotTo(gomega.HaveOccurred())
+						}
+					}
 				}
 
 				ginkgo.By("Searching for Froze in mcm log file")
