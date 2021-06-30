@@ -38,7 +38,7 @@ var (
 	mcmRepoPath = filepath.Join("..", "..", "..", "dev", "mcm")
 
 	// control cluster namespace to create resources.
-	// ignored if the target cluster is a shoot of control cluster
+	// ignored if the target cluster is a shoot of the control cluster
 	controlClusterNamespace = os.Getenv("controlClusterNamespace")
 
 	// make processes/sessions started by gexec. available only if the controllers are running in local setup. updated during runtime
@@ -197,7 +197,7 @@ func (c *IntegrationTestFramework) prepareMcmDeployment(mcContainerImageTag stri
 		}
 
 		if providerSpecificRegexp.Match([]byte(containers[i].Image)) {
-			// set container image to mcContainerImageTag as the name of container contains provider
+			// set container image to mcContainerImageTag as the name of the container contains provider
 			if len(mcContainerImageTag) != 0 {
 				containers[i].Image = splitedString[0] + ":" + mcContainerImageTag
 			}
@@ -223,7 +223,7 @@ func (c *IntegrationTestFramework) prepareMcmDeployment(mcContainerImageTag stri
 
 	// apply updated containers spec to mcmDeploymentObj in kubernetes cluster
 	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		// Retrieve the latest version of Deployment before attempting update
+		// Retrieve the latest version of Deployment before attempting to update
 		// RetryOnConflict uses exponential backoff to avoid exhausting the apiserver
 		mcmDeployment, getErr := c.ControlCluster.Clientset.AppsV1().Deployments(controlClusterNamespace).Get("machine-controller-manager", metav1.GetOptions{})
 		if getErr != nil {
@@ -360,10 +360,10 @@ func (c *IntegrationTestFramework) setupMachineClass() error {
 	return nil
 }
 
-// SetupBeforeSuite performs intial setup for the test by
+// SetupBeforeSuite performs the initial setup for the test by
 // - Checks control cluster and target clusters are accessible and initializes ControlCluster and TargetCluster.
-// - Check and optionally create crds (machineclass, machines, machinesets and machinedeployment) using kubernetes/crds directory of mcm repo.
-// - Setup controller processes either as a pod in control cluster or running locally.
+// - Check and optionally create crds (machineclass, machines, machinesets and machine deployment) using kubernetes/crds directory of the mcm repo.
+// - Setup controller processes either as a pod in the control cluster or running locally.
 // - Setup machineclass to use either by copying existing machineclass in seed cluster or by applying file.
 // - invokes InitializeResourcesTracker or rti for orphan resource check.
 func (c *IntegrationTestFramework) SetupBeforeSuite() {
@@ -375,8 +375,8 @@ func (c *IntegrationTestFramework) SetupBeforeSuite() {
 	gomega.Expect(c.initalizeClusters()).To(gomega.BeNil())
 
 	// preparing resources
-	// if control cluster is not seed then applyCrds from the mcm repo by cloning
-	// if no image tags specified then also clone mcm repo as the the mcm process needs to be started
+	// if control cluster is not the seed, then applyCrds from the mcm repo by cloning
+	// if no image tags specified, then also clone the mcm repo as the the mcm process needs to be started
 
 	if !c.ControlCluster.IsSeed(c.TargetCluster) || !(len(mcContainerImageTag) != 0 && len(mcmContainerImageTag) != 0) {
 
@@ -550,7 +550,7 @@ func (c *IntegrationTestFramework) ControllerTests() {
 				//probe initialnodes before continuing
 				initialNodes = c.TargetCluster.GetNumberOfNodes()
 
-				// apply machinedeployment resource yaml file
+				// // apply machine deployment resource YAML
 				ginkgo.By("Checking for errors")
 				gomega.Expect(c.ControlCluster.CreateMachineDeployment(controlClusterNamespace)).To(gomega.BeNil())
 
@@ -579,8 +579,8 @@ func (c *IntegrationTestFramework) ControllerTests() {
 
 		})
 		ginkgo.Context("scale-down with replicas=2", func() {
-			// rapidly scaling back to 2 leading to a freezing and unfreezing
-			// check for freezing and unfreezing of machine due to rapid scale up and scale down in the logs of mcm
+			// rapidly scaling back to 2, leading to freezing and unfreezing
+			// check for freezing and unfreezing of the machine due to rapidly scale up and scale down in the logs of mcm
 
 			ginkgo.It("should not lead to errors and remove 4 nodes from target cluster", func() {
 				retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
@@ -635,7 +635,7 @@ func (c *IntegrationTestFramework) ControllerTests() {
 			// scale up replicas by 4
 			// To-Do: Add check for rolling update completion (updatedReplicas check)
 			ginkgo.It("should upgrade machines and add more nodes to target", func() {
-				// wait for 2400s till machines updates
+				// wait for the 2400 seconds till machines updates
 				retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 					machineDployment, _ := c.ControlCluster.McmClient.MachineV1alpha1().MachineDeployments(controlClusterNamespace).Get("test-machine-deployment", metav1.GetOptions{})
 					machineDployment.Spec.Template.Spec.Class.Name = testMachineClassResources[1]
@@ -643,7 +643,7 @@ func (c *IntegrationTestFramework) ControllerTests() {
 					_, updateErr := c.ControlCluster.McmClient.MachineV1alpha1().MachineDeployments(controlClusterNamespace).Update(machineDployment)
 					return updateErr
 				})
-				//Check there is no error occured
+				// check there is no error occurred
 				ginkgo.By("Checking for errors")
 				gomega.Expect(retryErr).NotTo(gomega.HaveOccurred())
 				ginkgo.By("UpdatedReplicas to be 4")
@@ -689,7 +689,7 @@ func (c *IntegrationTestFramework) ControllerTests() {
 	ginkgo.Describe("zero Orphaned resource", func() {
 		ginkgo.Context("when the hyperscaler resources are querried", func() {
 			ginkgo.It("should match with inital resources", func() {
-				// if available should delete orphaned resources in cloud provider
+				// if available, should delete orphaned resources in the cloud provider
 				ginkgo.By("Querrying and comparing")
 				gomega.Expect(c.resourcesTracker.IsOrphanedResourcesAvailable()).To(gomega.BeFalse())
 			})
