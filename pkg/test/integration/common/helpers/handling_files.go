@@ -13,7 +13,7 @@ import (
 	v1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	mcmscheme "github.com/gardener/machine-controller-manager/pkg/client/clientset/versioned/scheme"
 	v1 "k8s.io/api/apps/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
+	rbacv1bata1 "k8s.io/api/rbac/v1beta1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apiextensionsscheme "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -134,17 +134,17 @@ func (c *Cluster) ApplyFile(filePath string, namespace string) error {
 					return err
 				}
 			case "ClusterRoleBinding":
-				resource := obj.(*rbacv1.ClusterRoleBinding)
+				resource := obj.(*rbacv1bata1.ClusterRoleBinding)
 				for i := range resource.Subjects {
 					resource.Subjects[i].Namespace = namespace
 				}
-				_, err := c.Clientset.RbacV1().ClusterRoleBindings().Create(resource)
+				_, err := c.Clientset.RbacV1beta1().ClusterRoleBindings().Create(resource)
 				if err != nil {
 					return err
 				}
 			case "ClusterRole":
-				resource := obj.(*rbacv1.ClusterRole)
-				_, err := c.Clientset.RbacV1().ClusterRoles().Create(resource)
+				resource := obj.(*rbacv1bata1.ClusterRole)
+				_, err := c.Clientset.RbacV1beta1().ClusterRoles().Create(resource)
 				if err != nil {
 					return err
 				}

@@ -159,7 +159,9 @@ func (c *IntegrationTestFramework) prepareMcmDeployment(mcContainerImage string,
 		// Create machine-deployment using the yaml file
 		controlClusterRegexp, _ := regexp.Compile("control-cluster-role")
 		targetClusterRegexp, _ := regexp.Compile("target-cluster-role")
-		err := filepath.Walk("../../../kubernetes/", func(path string, info os.FileInfo, err error) error {
+		log.Printf("Creating required roles and rolebinginds")
+
+		err := filepath.Walk(filepath.Join(mcmRepoPath, "kubernetes/deployment/out-of-tree/"), func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
 			}
@@ -822,11 +824,11 @@ func (c *IntegrationTestFramework) Cleanup() {
 	} else {
 		// To-Do: Remove crds
 		if len(os.Getenv("MC_CONTAINER_IMAGE")) != 0 && len(os.Getenv("MCM_CONTAINER_IMAGE")) != 0 {
-			c.ControlCluster.RbacClient.ClusterRoles().Delete("machine-controller-manager", &metav1.DeleteOptions{})
-			c.ControlCluster.RbacClient.ClusterRoleBindings().Delete("machine-controller-manager", &metav1.DeleteOptions{})
+			c.ControlCluster.RbacClient.ClusterRoles().Delete("machine-controller-manager-control", &metav1.DeleteOptions{})
+			c.ControlCluster.RbacClient.ClusterRoleBindings().Delete("machine-controller-manager-control", &metav1.DeleteOptions{})
 
-			c.TargetCluster.RbacClient.ClusterRoles().Delete("machine-controller-manager", &metav1.DeleteOptions{})
-			c.TargetCluster.RbacClient.ClusterRoleBindings().Delete("machine-controller-manager", &metav1.DeleteOptions{})
+			c.TargetCluster.RbacClient.ClusterRoles().Delete("machine-controller-manager-target", &metav1.DeleteOptions{})
+			c.TargetCluster.RbacClient.ClusterRoleBindings().Delete("machine-controller-manager-target", &metav1.DeleteOptions{})
 
 			c.ControlCluster.Clientset.CoreV1().Secrets(controlClusterNamespace).Delete("machine-controller-manager", &metav1.DeleteOptions{})
 			c.ControlCluster.Clientset.AppsV1().Deployments(controlClusterNamespace).Delete(machineControllerManagerDeploymentName, &metav1.DeleteOptions{})
