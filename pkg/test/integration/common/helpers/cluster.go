@@ -71,7 +71,7 @@ func (c *Cluster) IsSeed(target *Cluster) bool {
 			 ---- Alternatively check if there is a namespace with same name as that of cluster name found in kube config
 			kubectl get clusters -A
 			NAME                             AGE
-			shoot--dev--ash-shoot-06022021   46h
+			shoot--landscape--project-shoot   46h
 
 	*/
 	targetClusterName, _ := target.ClusterName()
