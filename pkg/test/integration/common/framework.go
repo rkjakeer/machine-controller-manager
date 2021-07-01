@@ -50,6 +50,10 @@ var (
 	// used only if control cluster is seed
 	mcmDeploymentOrigObj *appsV1.Deployment
 
+	// machineControllerManagemerDeploymentName specifies the name of the deployment
+	// running the mc and mcm containers in it.
+	machineControllerManagemerDeploymentName = os.Getenv("machineControllerManagemerDeploymentName")
+
 	// names of machineclass resource.
 	testMachineClassResources = []string{"test-mc-v1", "test-mc-v2"}
 
@@ -145,6 +149,10 @@ func (c *IntegrationTestFramework) initalizeClusters() error {
 }
 
 func (c *IntegrationTestFramework) prepareMcmDeployment(mcContainerImageTag string, mcmContainerImageTag string, byCreating bool) error {
+	if machineControllerManagemerDeploymentName == "" {
+		machineControllerManagemerDeploymentName = "machine-controller-manager"
+	}
+
 	if byCreating {
 		// Create clusterroles and clusterrolebindings for control and target cluster
 		// Create secret containing target kubeconfig file
@@ -171,7 +179,7 @@ func (c *IntegrationTestFramework) prepareMcmDeployment(mcContainerImageTag stri
 	}
 
 	// mcmDeploymentOrigObj holds a copy of original mcm deployment
-	result, getErr := c.ControlCluster.Clientset.AppsV1().Deployments(controlClusterNamespace).Get("machine-controller-manager", metav1.GetOptions{})
+	result, getErr := c.ControlCluster.Clientset.AppsV1().Deployments(controlClusterNamespace).Get(machineControllerManagemerDeploymentName, metav1.GetOptions{})
 	if getErr != nil {
 		log.Printf("failed to get latest version of Deployment: %v", getErr)
 		return getErr
@@ -219,7 +227,7 @@ func (c *IntegrationTestFramework) prepareMcmDeployment(mcContainerImageTag stri
 	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		// Retrieve the latest version of Deployment before attempting to update
 		// RetryOnConflict uses exponential backoff to avoid exhausting the apiserver
-		mcmDeployment, getErr := c.ControlCluster.Clientset.AppsV1().Deployments(controlClusterNamespace).Get("machine-controller-manager", metav1.GetOptions{})
+		mcmDeployment, getErr := c.ControlCluster.Clientset.AppsV1().Deployments(controlClusterNamespace).Get(machineControllerManagemerDeploymentName, metav1.GetOptions{})
 		if getErr != nil {
 			log.Printf("failed to get latest version of Deployment: %v", getErr)
 			return getErr
@@ -231,7 +239,7 @@ func (c *IntegrationTestFramework) prepareMcmDeployment(mcContainerImageTag stri
 
 	ginkgo.By("Checking controllers are ready in kubernetes cluster")
 	gomega.Eventually(func() int {
-		deployment, err := c.ControlCluster.Clientset.AppsV1().Deployments(controlClusterNamespace).Get("machine-controller-manager", metav1.GetOptions{})
+		deployment, err := c.ControlCluster.Clientset.AppsV1().Deployments(controlClusterNamespace).Get(machineControllerManagemerDeploymentName, metav1.GetOptions{})
 		if err != nil {
 			log.Println("Failed to get deployment object")
 		}
@@ -242,7 +250,7 @@ func (c *IntegrationTestFramework) prepareMcmDeployment(mcContainerImageTag stri
 }
 
 func (c *IntegrationTestFramework) scaleMcmDeployment(replicas int32) error {
-	result, getErr := c.ControlCluster.Clientset.AppsV1().Deployments(controlClusterNamespace).Get("machine-controller-manager", metav1.GetOptions{})
+	result, getErr := c.ControlCluster.Clientset.AppsV1().Deployments(controlClusterNamespace).Get(machineControllerManagemerDeploymentName, metav1.GetOptions{})
 	if getErr != nil {
 		return getErr
 	}
@@ -251,7 +259,7 @@ func (c *IntegrationTestFramework) scaleMcmDeployment(replicas int32) error {
 	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		// Retrieve the latest version of Deployment before attempting update
 		// RetryOnConflict uses exponential backoff to avoid exhausting the apiserver
-		result, getErr := c.ControlCluster.Clientset.AppsV1().Deployments(controlClusterNamespace).Get("machine-controller-manager", metav1.GetOptions{})
+		result, getErr := c.ControlCluster.Clientset.AppsV1().Deployments(controlClusterNamespace).Get(machineControllerManagemerDeploymentName, metav1.GetOptions{})
 		if getErr != nil {
 			return getErr
 		}
@@ -785,7 +793,7 @@ func (c *IntegrationTestFramework) Cleanup() {
 			c.ControlCluster.ClusterRolesAndRoleBindingCleanup()
 			c.TargetCluster.ClusterRolesAndRoleBindingCleanup()
 			c.ControlCluster.Clientset.CoreV1().Secrets(controlClusterNamespace).Delete("machine-controller-manager-target", &metav1.DeleteOptions{})
-			c.ControlCluster.Clientset.AppsV1().Deployments(controlClusterNamespace).Delete("machine-controller-manager", &metav1.DeleteOptions{})
+			c.ControlCluster.Clientset.AppsV1().Deployments(controlClusterNamespace).Delete(machineControllerManagemerDeploymentName, &metav1.DeleteOptions{})
 		}
 	}
 }
