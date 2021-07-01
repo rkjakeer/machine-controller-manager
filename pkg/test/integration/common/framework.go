@@ -147,7 +147,7 @@ func (c *IntegrationTestFramework) initalizeClusters() error {
 
 func (c *IntegrationTestFramework) prepareMcmDeployment(mcContainerImageTag string, mcmContainerImageTag string, byCreating bool) error {
 	/*
-		if any of mcmContainerImage  or mcContainerImageTag flag is non-empty then,
+		if any of mcmContainerImage or mcContainerImageTag flag is non-empty then,
 		update machinecontrollermanager deployment in the control-cluster with specified image
 		 -
 	*/
