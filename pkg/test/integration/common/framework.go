@@ -255,7 +255,7 @@ func (c *IntegrationTestFramework) prepareMcmDeployment(mcContainerImage string,
 		}
 		if deployment.Status.ReadyReplicas == 1 {
 			pods, err := c.ControlCluster.Clientset.CoreV1().Pods(controlClusterNamespace).List(metav1.ListOptions{
-				LabelSelector: "app=machine-controller-manager",
+				LabelSelector: "role=machine-controller-manager",
 			})
 			if err != nil {
 				return err
@@ -628,7 +628,7 @@ func (c *IntegrationTestFramework) ControllerTests() {
 					gomega.Expect(err).NotTo(gomega.HaveOccurred())
 					ginkgo.By("Reading container log is leading to no errors")
 					podList, err := c.ControlCluster.Clientset.CoreV1().Pods(controlClusterNamespace).List(metav1.ListOptions{
-						LabelSelector: "app=machine-controller-manager",
+						LabelSelector: "role=machine-controller-manager",
 					})
 					gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
