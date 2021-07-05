@@ -82,14 +82,39 @@ type IntegrationTestFramework struct {
 	// And kubeconfig file path for the cluster
 	// initialization is done by SetupBeforeSuite
 	TargetCluster *helpers.Cluster
+
+	// Timeout for Eventually to probe kubernetes cluster resources
+	// for machine creation, deletion, machinedeployment update
+	// can be different for different cloud providers
+	timeout time.Duration
+
+	// PollingInterval for Eventually to probe kubernetes cluster resources
+	// for machine creation, deletion, machinedeployment update
+	// can be different for different cloud providers
+	pollingInterval time.Duration
 }
 
 // NewIntegrationTestFramework creates a new IntegrationTestFramework
 // initializing resource tracker implementation.
-// and containing placeholder for ControlCluster and TargetCluster
-func NewIntegrationTestFramework(resourcesTracker helpers.ResourcesTrackerInterface) (c *IntegrationTestFramework) {
+// Optially the timeout and polling interval are configurable as optional arguments
+// The default values used for Eventually to probe kubernetes cluster resources is
+// 180 seconds for timeout and  2 seconds for polling interval
+// for machine creation, deletion, machinedeployment update e.t.c.,
+// The first optional argument is the timeoutSeconds
+// The second optional argument is the pollingIntervalSeconds
+func NewIntegrationTestFramework(resourcesTracker helpers.ResourcesTrackerInterface, intervals ...int64) (c *IntegrationTestFramework) {
+	timeout := 180 * time.Second
+	pollingInterval := 2 * time.Second
+	if len(intervals) > 0 {
+		timeout = time.Duration(intervals[0]) * time.Second
+	}
+	if len(intervals) > 1 {
+		pollingInterval = time.Duration(intervals[0]) * time.Second
+	}
 	c = &IntegrationTestFramework{
 		resourcesTracker: resourcesTracker,
+		timeout:          timeout,
+		pollingInterval:  pollingInterval,
 	}
 	return c
 }
@@ -148,7 +173,10 @@ func (c *IntegrationTestFramework) initalizeClusters() error {
 	return nil
 }
 
-func (c *IntegrationTestFramework) prepareMcmDeployment(mcContainerImage string, mcmContainerImage string, byCreating bool) error {
+func (c *IntegrationTestFramework) prepareMcmDeployment(
+	mcContainerImage string,
+	mcmContainerImage string,
+	byCreating bool) error {
 	if machineControllerManagerDeploymentName == "" {
 		machineControllerManagerDeploymentName = "machine-controller-manager"
 	}
@@ -278,7 +306,7 @@ func (c *IntegrationTestFramework) prepareMcmDeployment(mcContainerImage string,
 			}
 		}
 		return fmt.Errorf("deployment replicas are not ready.\n%s", deployment.Status.String())
-	}, 60, 5).Should(gomega.BeNil())
+	}, c.timeout, c.pollingInterval).Should(gomega.BeNil())
 
 	return retryErr
 }
@@ -511,7 +539,7 @@ func (c *IntegrationTestFramework) BeforeEachCheck() {
 			gomega.Expect(mcmsession.ExitCode()).Should(gomega.Equal(-1))
 		}
 		ginkgo.By("Checking nodes in target cluster are healthy")
-		gomega.Eventually(c.TargetCluster.GetNumberOfReadyNodes, 180, 5).Should(gomega.BeNumerically("==", c.TargetCluster.GetNumberOfNodes()))
+		gomega.Eventually(c.TargetCluster.GetNumberOfReadyNodes, c.timeout, c.pollingInterval).Should(gomega.BeNumerically("==", c.TargetCluster.GetNumberOfNodes()))
 	})
 }
 
@@ -531,8 +559,8 @@ func (c *IntegrationTestFramework) ControllerTests() {
 				gomega.Expect(c.ControlCluster.CreateMachine(controlClusterNamespace)).To(gomega.BeNil())
 
 				ginkgo.By("Waiting until number of ready nodes is 1 more than initial nodes")
-				gomega.Eventually(c.TargetCluster.GetNumberOfNodes, 600, 5).Should(gomega.BeNumerically("==", initialNodes+1))
-				gomega.Eventually(c.TargetCluster.GetNumberOfReadyNodes, 600, 5).Should(gomega.BeNumerically("==", initialNodes+1))
+				gomega.Eventually(c.TargetCluster.GetNumberOfNodes, c.timeout, c.pollingInterval).Should(gomega.BeNumerically("==", initialNodes+1))
+				gomega.Eventually(c.TargetCluster.GetNumberOfReadyNodes, c.timeout, c.pollingInterval).Should(gomega.BeNumerically("==", initialNodes+1))
 			})
 		})
 
@@ -545,8 +573,8 @@ func (c *IntegrationTestFramework) ControllerTests() {
 						gomega.Expect(c.ControlCluster.McmClient.MachineV1alpha1().Machines(controlClusterNamespace).Delete("test-machine", &metav1.DeleteOptions{})).Should(gomega.BeNil(), "No Errors while deleting machine")
 
 						ginkgo.By("Waiting until number of ready nodes is equal to number of initial  nodes")
-						gomega.Eventually(c.TargetCluster.GetNumberOfNodes, 180, 5).Should(gomega.BeNumerically("==", initialNodes))
-						gomega.Eventually(c.TargetCluster.GetNumberOfReadyNodes, 180, 5).Should(gomega.BeNumerically("==", initialNodes))
+						gomega.Eventually(c.TargetCluster.GetNumberOfNodes, c.timeout, c.pollingInterval).Should(gomega.BeNumerically("==", initialNodes))
+						gomega.Eventually(c.TargetCluster.GetNumberOfReadyNodes, c.timeout, c.pollingInterval).Should(gomega.BeNumerically("==", initialNodes))
 					}
 
 				})
@@ -582,8 +610,8 @@ func (c *IntegrationTestFramework) ControllerTests() {
 				gomega.Expect(c.ControlCluster.CreateMachineDeployment(controlClusterNamespace)).To(gomega.BeNil())
 
 				ginkgo.By("Waiting until number of ready nodes are 3 more than initial")
-				gomega.Eventually(c.TargetCluster.GetNumberOfNodes, 180, 5).Should(gomega.BeNumerically("==", initialNodes+3))
-				gomega.Eventually(c.TargetCluster.GetNumberOfReadyNodes, 180, 5).Should(gomega.BeNumerically("==", initialNodes+3))
+				gomega.Eventually(c.TargetCluster.GetNumberOfNodes, c.timeout, c.pollingInterval).Should(gomega.BeNumerically("==", initialNodes+3))
+				gomega.Eventually(c.TargetCluster.GetNumberOfReadyNodes, c.timeout, c.pollingInterval).Should(gomega.BeNumerically("==", initialNodes+3))
 			})
 		})
 		ginkgo.Context("scale-up with replicas=6", func() {
@@ -597,8 +625,8 @@ func (c *IntegrationTestFramework) ControllerTests() {
 				ginkgo.By("Checking for errors")
 				gomega.Expect(retryErr).NotTo(gomega.HaveOccurred())
 				ginkgo.By("Checking number of ready nodes are 6 more than initial")
-				gomega.Eventually(c.TargetCluster.GetNumberOfNodes, 180, 5).Should(gomega.BeNumerically("==", initialNodes+6))
-				gomega.Eventually(c.TargetCluster.GetNumberOfReadyNodes, 180, 5).Should(gomega.BeNumerically("==", initialNodes+6))
+				gomega.Eventually(c.TargetCluster.GetNumberOfNodes, c.timeout, c.pollingInterval).Should(gomega.BeNumerically("==", initialNodes+6))
+				gomega.Eventually(c.TargetCluster.GetNumberOfReadyNodes, c.timeout, c.pollingInterval).Should(gomega.BeNumerically("==", initialNodes+6))
 			})
 
 		})
@@ -614,8 +642,8 @@ func (c *IntegrationTestFramework) ControllerTests() {
 				gomega.Expect(retryErr).NotTo(gomega.HaveOccurred())
 
 				ginkgo.By("Checking number of ready nodes are 2 more than initial")
-				gomega.Eventually(c.TargetCluster.GetNumberOfNodes, 300, 5).Should(gomega.BeNumerically("==", initialNodes+2))
-				gomega.Eventually(c.TargetCluster.GetNumberOfReadyNodes, 300, 5).Should(gomega.BeNumerically("==", initialNodes+2))
+				gomega.Eventually(c.TargetCluster.GetNumberOfNodes, c.timeout, c.pollingInterval).Should(gomega.BeNumerically("==", initialNodes+2))
+				gomega.Eventually(c.TargetCluster.GetNumberOfReadyNodes, c.timeout, c.pollingInterval).Should(gomega.BeNumerically("==", initialNodes+2))
 			})
 			// rapid scaling back to 2, should lead to freezing and unfreezing
 			ginkgo.It("should freeze and unfreeze machineset temporarily", func() {
@@ -663,14 +691,14 @@ func (c *IntegrationTestFramework) ControllerTests() {
 				gomega.Eventually(func() bool {
 					data, _ := ioutil.ReadFile(mcmLogFile)
 					return frozeRegexp.Match(data)
-				}, 300, 5).Should(gomega.BeTrue())
+				}, c.timeout, c.pollingInterval).Should(gomega.BeTrue())
 
 				ginkgo.By("Searching Unfroze in mcm log file")
 				unfrozeRegexp, _ := regexp.Compile(` Unfroze MachineSet`)
 				gomega.Eventually(func() bool {
 					data, _ := ioutil.ReadFile(mcmLogFile)
 					return unfrozeRegexp.Match(data)
-				}, 300, 5).Should(gomega.BeTrue())
+				}, c.timeout, c.pollingInterval).Should(gomega.BeTrue())
 			})
 		})
 		ginkgo.Context("updation to v2 machine-class and replicas=4", func() {
@@ -693,7 +721,7 @@ func (c *IntegrationTestFramework) ControllerTests() {
 						log.Println("Failed to get machinedeployment object")
 					}
 					return int(machineDeployment.Status.UpdatedReplicas)
-				}, 300, 5).Should(gomega.BeNumerically("==", 4))
+				}, c.timeout, c.pollingInterval).Should(gomega.BeNumerically("==", 4))
 				ginkgo.By("AvailableReplicas to be 4")
 				gomega.Eventually(func() int {
 					machineDeployment, err := c.ControlCluster.McmClient.MachineV1alpha1().MachineDeployments(controlClusterNamespace).Get("test-machine-deployment", metav1.GetOptions{})
@@ -701,10 +729,10 @@ func (c *IntegrationTestFramework) ControllerTests() {
 						log.Println("Failed to get machinedeployment object")
 					}
 					return int(machineDeployment.Status.AvailableReplicas)
-				}, 300, 5).Should(gomega.BeNumerically("==", 4))
+				}, c.timeout, c.pollingInterval).Should(gomega.BeNumerically("==", 4))
 				ginkgo.By("Number of ready nodes be 4 more")
-				gomega.Eventually(c.TargetCluster.GetNumberOfNodes, 300, 5).Should(gomega.BeNumerically("==", initialNodes+4))
-				gomega.Eventually(c.TargetCluster.GetNumberOfReadyNodes, 300, 5).Should(gomega.BeNumerically("==", initialNodes+4))
+				gomega.Eventually(c.TargetCluster.GetNumberOfNodes, c.timeout, c.pollingInterval).Should(gomega.BeNumerically("==", initialNodes+4))
+				gomega.Eventually(c.TargetCluster.GetNumberOfReadyNodes, c.timeout, c.pollingInterval).Should(gomega.BeNumerically("==", initialNodes+4))
 
 			})
 		})
@@ -716,8 +744,8 @@ func (c *IntegrationTestFramework) ControllerTests() {
 						ginkgo.By("Checking for errors")
 						gomega.Expect(c.ControlCluster.McmClient.MachineV1alpha1().MachineDeployments(controlClusterNamespace).Delete("test-machine-deployment", &metav1.DeleteOptions{})).Should(gomega.BeNil())
 						ginkgo.By("Waiting until number of ready nodes is equal to number of initial  nodes")
-						gomega.Eventually(c.TargetCluster.GetNumberOfNodes, 300, 5).Should(gomega.BeNumerically("==", initialNodes))
-						gomega.Eventually(c.TargetCluster.GetNumberOfReadyNodes, 300, 5).Should(gomega.BeNumerically("==", initialNodes))
+						gomega.Eventually(c.TargetCluster.GetNumberOfNodes, c.timeout, c.pollingInterval).Should(gomega.BeNumerically("==", initialNodes))
+						gomega.Eventually(c.TargetCluster.GetNumberOfReadyNodes, c.timeout, c.pollingInterval).Should(gomega.BeNumerically("==", initialNodes))
 					}
 				})
 			})
