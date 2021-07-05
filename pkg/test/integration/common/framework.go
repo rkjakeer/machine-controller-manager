@@ -83,12 +83,12 @@ type IntegrationTestFramework struct {
 	// initialization is done by SetupBeforeSuite
 	TargetCluster *helpers.Cluster
 
-	// Timeout for Eventually to probe kubernetes cluster resources
+	// timeout for Eventually to probe kubernetes cluster resources
 	// for machine creation, deletion, machinedeployment update
 	// can be different for different cloud providers
 	timeout time.Duration
 
-	// PollingInterval for Eventually to probe kubernetes cluster resources
+	// pollingInterval for Eventually to probe kubernetes cluster resources
 	// for machine creation, deletion, machinedeployment update
 	// can be different for different cloud providers
 	pollingInterval time.Duration
