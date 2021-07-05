@@ -98,12 +98,12 @@ type IntegrationTestFramework struct {
 // initializing resource tracker implementation.
 // Optially the timeout and polling interval are configurable as optional arguments
 // The default values used for Eventually to probe kubernetes cluster resources is
-// 180 seconds for timeout and  2 seconds for polling interval
+// 300 seconds for timeout and  2 seconds for polling interval
 // for machine creation, deletion, machinedeployment update e.t.c.,
 // The first optional argument is the timeoutSeconds
 // The second optional argument is the pollingIntervalSeconds
 func NewIntegrationTestFramework(resourcesTracker helpers.ResourcesTrackerInterface, intervals ...int64) (c *IntegrationTestFramework) {
-	timeout := 180 * time.Second
+	timeout := 300 * time.Second
 	pollingInterval := 2 * time.Second
 	if len(intervals) > 0 {
 		timeout = time.Duration(intervals[0]) * time.Second
@@ -195,9 +195,9 @@ func (c *IntegrationTestFramework) prepareMcmDeployment(
 			}
 			if !info.IsDir() {
 				if controlClusterRegexp.MatchString(info.Name()) {
-					err = c.ControlCluster.ApplyFile(path, controlClusterNamespace)
+					err = c.ControlCluster.ApplyFiles(path, controlClusterNamespace)
 				} else if targetClusterRegexp.MatchString(info.Name()) {
-					err = c.TargetCluster.ApplyFile(path, "default")
+					err = c.TargetCluster.ApplyFiles(path, "default")
 				}
 			}
 			return err
@@ -217,7 +217,7 @@ func (c *IntegrationTestFramework) prepareMcmDeployment(
 			Type: coreV1.SecretTypeOpaque,
 		})
 
-		err = c.ControlCluster.ApplyFile("../../../kubernetes/deployment.yaml",
+		err = c.ControlCluster.ApplyFiles("../../../kubernetes/deployment.yaml",
 			controlClusterNamespace)
 		if err != nil {
 			return err
@@ -345,12 +345,12 @@ func (c *IntegrationTestFramework) setupMachineClass() error {
 	if !c.ControlCluster.IsSeed(c.TargetCluster) {
 		//use yaml files
 		log.Printf("Applying machineclass yaml file: %s", v1MachineClassPath)
-		if err := c.ControlCluster.ApplyFile(v1MachineClassPath, controlClusterNamespace); err != nil {
+		if err := c.ControlCluster.ApplyFiles(v1MachineClassPath, controlClusterNamespace); err != nil {
 			return err
 		}
 		if len(v2MachineClassPath) != 0 {
 			log.Printf("Applying machineclass yaml file: %s", v2MachineClassPath)
-			if err := c.ControlCluster.ApplyFile(v2MachineClassPath, controlClusterNamespace); err != nil {
+			if err := c.ControlCluster.ApplyFiles(v2MachineClassPath, controlClusterNamespace); err != nil {
 				return err
 			}
 		} else {
@@ -552,7 +552,7 @@ func (c *IntegrationTestFramework) ControllerTests() {
 	ginkgo.Describe("machine resource", func() {
 		var initialNodes int16
 		ginkgo.Context("creation", func() {
-			ginkgo.It("should not lead to any errors and add 1 more node in target cluste", func() {
+			ginkgo.It("should not lead to any errors and add 1 more node in target cluster", func() {
 				// Probe nodes currently available in target cluster
 				initialNodes = c.TargetCluster.GetNumberOfNodes()
 				ginkgo.By("Checking for errors")
@@ -850,13 +850,30 @@ func (c *IntegrationTestFramework) Cleanup() {
 			return updateErr
 		})
 	} else {
-		// To-Do: Remove crds
+		log.Println("Deleting crds")
+		err := c.ControlCluster.DeleteResources(filepath.Join(mcmRepoPath, "kubernetes/crds"), controlClusterNamespace)
+		if err != nil {
+			log.Printf("Error occured while deleting crds. %s", err.Error())
+		}
 		if len(os.Getenv("MC_CONTAINER_IMAGE")) != 0 && len(os.Getenv("MCM_CONTAINER_IMAGE")) != 0 {
-			c.ControlCluster.RbacClient.ClusterRoles().Delete("machine-controller-manager-control", &metav1.DeleteOptions{})
-			c.ControlCluster.RbacClient.ClusterRoleBindings().Delete("machine-controller-manager-control", &metav1.DeleteOptions{})
+			log.Println("Deleting Clusterroles")
+			err := c.ControlCluster.RbacClient.ClusterRoles().Delete("machine-controller-manager-control", &metav1.DeleteOptions{})
+			if err != nil {
+				log.Printf("Error occured while deleting clusterrole. %s", err.Error())
+			}
+			err = c.ControlCluster.RbacClient.ClusterRoleBindings().Delete("machine-controller-manager-control", &metav1.DeleteOptions{})
+			if err != nil {
+				log.Printf("Error occured while deleting clusterrolebinding . %s", err.Error())
+			}
 
-			c.TargetCluster.RbacClient.ClusterRoles().Delete("machine-controller-manager-target", &metav1.DeleteOptions{})
-			c.TargetCluster.RbacClient.ClusterRoleBindings().Delete("machine-controller-manager-target", &metav1.DeleteOptions{})
+			err = c.TargetCluster.RbacClient.ClusterRoles().Delete("machine-controller-manager-target", &metav1.DeleteOptions{})
+			if err != nil {
+				log.Printf("Error occured while deleting clusterrole . %s", err.Error())
+			}
+			err = c.TargetCluster.RbacClient.ClusterRoleBindings().Delete("machine-controller-manager-target", &metav1.DeleteOptions{})
+			if err != nil {
+				log.Printf("Error occured while deleting clusterrolebinding . %s", err.Error())
+			}
 
 			c.ControlCluster.Clientset.CoreV1().Secrets(controlClusterNamespace).Delete("machine-controller-manager", &metav1.DeleteOptions{})
 			c.ControlCluster.Clientset.AppsV1().Deployments(controlClusterNamespace).Delete(machineControllerManagerDeploymentName, &metav1.DeleteOptions{})
