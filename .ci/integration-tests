@@ -148,7 +148,7 @@ function run_controller() {
         --machine-safety-apiserver-statuscheck-timeout=30s \
         --machine-safety-apiserver-statuscheck-period=1m \
         --machine-safety-orphan-vms-period=30m \
-        --machine-safety-overshooting-period=300ms \
+        --machine-safety-overshooting-period=100ms \
         --leader-elect-lease-duration=1m \
         --leader-elect-renew-deadline=30s \
         --leader-elect-retry-period=15s \
@@ -366,7 +366,7 @@ function tc_machine_deployment() {
     printf "\n\tWaiting 1800s for 3 machines to join the cluster"
     hf_wait_on "hf_num_of_ready_nodes" nodes 3 1800
 
-    # Scale up the number of nodes to 6 and rapidly scale back to 2
+    # # Scale up the number of nodes to 6 and rapidly scale back to 2
     hf_object_configure $provider/md-scale-up.yaml
     printf "\n\tScale up the number of nodes to 6 and rapidly scale back to 2 leading to a freezing and unfreezing"
     sleep 20
@@ -386,7 +386,7 @@ function tc_machine_deployment() {
     printf "\n\tWaiting 1800s for machine to be deleted"
     hf_wait_on "hf_num_of_objects" machdeploy 0 1800
 
-    # Scaling from 6 to 2 should lead to freezing and unfreezing of machine-set
+    # # Scaling from 6 to 2 should lead to freezing and unfreezing of machine-set
     printf "\n\tCheck for freezing and unfreezing of machine-set due to rapid scaleUp and scaleDown"
     hf_check_ms_freeze
     printf "\n\tFreezing and unfreezing of machineSet was observed"
